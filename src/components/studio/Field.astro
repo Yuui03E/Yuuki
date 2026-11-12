@@ -1,0 +1,14 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+interface Props { name: string; label: string; type?: HTMLAttributes<'input'>['type'] | 'textarea'; options?: string[]; required?: boolean; value?: string; placeholder?: string; help?: string; rows?: number; wide?: boolean; }
+const { name, label, type = 'text', options, required = false, value, placeholder, help, rows = 4, wide = false } = Astro.props;
+---
+<label class:list={['studio-field', { wide }]}><span>{label}{required && <i aria-hidden="true"> *</i>}</span>{options ? <select name={name} required={required}>{options.map((option) => <option value={option} selected={value === option}>{option}</option>)}</select> : type === 'textarea' ? <textarea name={name} required={required} placeholder={placeholder} rows={rows}>{value}</textarea> : <input name={name} type={type} required={required} value={value} placeholder={placeholder} min={type === 'number' ? 0 : undefined}/ >}{help && <small>{help}</small>}</label>
+<style>
+  .studio-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .studio-field > span { font-size: .78rem; color: var(--muted); }
+  i { color: var(--cyan); font-style: normal; }
+  small { font-size: .67rem; color: var(--subtle); line-height: 1.6; }
+  .wide { grid-column: 1 / -1; }
+  textarea { font-size: .8rem; line-height: 1.7; }
+</style>

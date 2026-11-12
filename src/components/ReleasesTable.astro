@@ -1,0 +1,85 @@
+---
+import type { AnimeEntry, EpisodeEntry } from '../lib/archive';
+import { audioSummary, episodeLabel, formatDate, pathFor, releaseTitle } from '../lib/archive';
+import Icon from './Icon.astro';
+interface Props { episodes: EpisodeEntry[]; anime: AnimeEntry[]; id?: string; }
+const { episodes, anime, id = 'releases' } = Astro.props;
+const seriesMap = new Map(anime.map((entry) => [entry.id, entry]));
+const pills = ['All', 'BD', 'WEB', 'AV1', 'HEVC', 'Batch'];
+---
+<div class="release-table panel" data-release-table id={id}>
+  <div class="table-toolbar" data-pagefind-ignore><div class="pill-row" role="group" aria-label="Filter releases">{pills.map((pill) => <button type="button" class="filter-pill" data-filter={pill.toLowerCase()} aria-pressed={pill === 'All'}>{pill}</button>)}</div><div class="table-search"><Icon name="search" size={14}/><label class="sr-only" for={`${id}-search`}>Search releases</label><input id={`${id}-search`} type="search" placeholder="Filter releases…" data-release-search /></div></div>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Release table. Scroll horizontally for specifications and links.">
+    <table><caption class="sr-only">Yuuki episode and batch releases, newest first</caption><thead><tr><th scope="col">Release</th><th scope="col">Source</th><th scope="col">Res</th><th scope="col">Video</th><th scope="col">Audio</th><th scope="col">Size</th><th scope="col">Date</th><th scope="col" class="links-head">Links</th></tr></thead><tbody>{episodes.map((entry) => {
+      const series = seriesMap.get(entry.data.anime.id);
+      const source = entry.data.source ?? series?.data.sourceType;
+      const filters = [source?.toLowerCase().includes('bd') ? 'bd' : '', source?.toLowerCase().includes('web') ? 'web' : '', entry.data.videoCodec?.toLowerCase().includes('av1') ? 'av1' : '', /hevc|x265|h\.265/i.test(entry.data.videoCodec ?? '') ? 'hevc' : '', entry.data.isBatch ? 'batch' : ''].filter(Boolean).join(' ');
+      return <tr data-release-row data-search={`${releaseTitle(entry, series)} ${entry.data.title ?? ''} ${source ?? ''} ${entry.data.videoCodec ?? ''} ${entry.data.resolution ?? ''} ${entry.data.version}`.toLowerCase()} data-filters={filters}>
+        <td class="release-name"><a href={pathFor('releases', entry.id)}><span class="tag mono">{entry.data.releaseTag}</span><span class="title">{series?.data.title}</span><span class="episode mono">{entry.data.isBatch ? episodeLabel(entry) : `— ${episodeLabel(entry)}`}</span></a><div class="release-secondary">{entry.data.title && <span>{entry.data.title}</span>}{entry.data.isBatch && <span class="batch-marker mono">BATCH</span>}<span class="version mono">{entry.data.version}</span></div></td>
+        <td>{source && <span class="badge">{source}</span>}</td><td class="mono specs">{entry.data.resolution && <span>{entry.data.resolution}</span>}</td><td>{entry.data.videoCodec && <span class:list={['badge', entry.data.videoCodec.includes('AV1') ? 'badge-violet' : 'badge-cyan']}>{entry.data.videoCodec}</span>}{entry.data.bitDepth && <span class="depth mono">{entry.data.bitDepth}-bit</span>}</td><td class="mono specs">{audioSummary(entry) && <span>{audioSummary(entry)}</span>}</td><td class="mono specs">{entry.data.fileSize && <span>{entry.data.fileSize}</span>}</td><td class="mono date"><time datetime={entry.data.releaseDate.toISOString()}>{formatDate(entry.data.releaseDate)}</time></td><td class="release-links">{entry.data.downloads?.slice(0, 3).map((download) => <a href={download.url} class="download-link" title={download.label} aria-label={`${download.label} for ${releaseTitle(entry, series)}`} target={download.isMagnet ? undefined : '_blank'} rel="noreferrer"><Icon name={download.isMagnet ? 'magnet' : 'download'} size={15}/></a>)}<a class="download-link detail-link" href={pathFor('releases', entry.id)} aria-label={`Details for ${releaseTitle(entry, series)}`} title="Release details"><Icon name="chevron" size={14}/></a></td>
+      </tr>;
+    })}</tbody></table>
+  </div>
+  <p class="table-empty" data-release-empty hidden>No releases match these filters.</p>
+  <div class="table-bottom mono" data-pagefind-ignore><span data-release-count>{episodes.length} releases</span><span>NEWEST FIRST <span class="cyan">↓</span></span></div>
+</div>
+<script>
+  document.querySelectorAll<HTMLElement>('[data-release-table]').forEach((table) => {
+    const input = table.querySelector<HTMLInputElement>('[data-release-search]');
+    const rows = Array.from(table.querySelectorAll<HTMLElement>('[data-release-row]'));
+    const buttons = Array.from(table.querySelectorAll<HTMLButtonElement>('[data-filter]'));
+    let filter = 'all';
+    const apply = () => {
+      const words = (input?.value.toLowerCase().trim() ?? '').split(/\s+/).filter(Boolean);
+      let count = 0;
+      rows.forEach((row) => {
+        const show = words.every((word) => row.dataset.search?.includes(word)) && (filter === 'all' || row.dataset.filters?.split(' ').includes(filter));
+        row.hidden = !show;
+        if (show) count++;
+      });
+      const label = table.querySelector('[data-release-count]');
+      if (label) label.textContent = `${count} of ${rows.length} releases`;
+      const empty = table.querySelector<HTMLElement>('[data-release-empty]');
+      if (empty) empty.hidden = count > 0;
+    };
+    input?.addEventListener('input', apply);
+    buttons.forEach((button) => button.addEventListener('click', () => {
+      filter = button.dataset.filter ?? 'all';
+      buttons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+      apply();
+    }));
+    apply();
+  });
+</script>
+<style>
+  .release-table { overflow: hidden; }
+  .table-toolbar { display: flex; align-items: center; gap: 15px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .table-search { display: flex; align-items: center; gap: 8px; margin-left: auto; width: 220px; color: var(--subtle); }
+  .table-search input { border: 0; background: transparent; padding: 4px 0; font-size: .78rem; border-radius: 0; }
+  .table-scroll { overflow-x: auto; }
+  table { min-width: 1050px; }
+  th { color: var(--subtle); font: .67rem var(--font-mono); padding: 10px 14px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
+  td { padding: 15px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--surface-hover); }
+  .release-name { min-width: 335px; max-width: 460px; }
+  .release-name a { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; line-height: 1.5; }
+  .release-name a:hover .title { color: var(--cyan); }
+  .title { font-size: .84rem; font-weight: 550; max-width: 300px; white-space: normal; }
+  .tag { color: var(--cyan); font-size: .75rem; }
+  .episode { color: var(--muted); font-size: .77rem; }
+  .release-secondary { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: .69rem; color: var(--subtle); }
+  .version { margin-left: 3px; font-size: .65rem; }
+  .batch-marker { color: var(--violet); font-size: .62rem; }
+  .specs { font-size: .7rem; color: var(--muted); }
+  .date { font-size: .69rem; color: var(--muted); }
+  .depth { display: block; font-size: .63rem; color: var(--subtle); margin-top: 3px; }
+  .links-head { text-align: right; }
+  .release-links { text-align: right; }
+  .download-link { display: inline-grid; place-items: center; width: 27px; height: 28px; border-radius: 4px; color: var(--cyan); }
+  .download-link:hover { background: var(--accent-wash); }
+  .detail-link { color: var(--subtle); }
+  .table-bottom { display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding: 9px 16px; color: var(--subtle); font-size: .62rem; letter-spacing: .02em; }
+  .table-empty { padding: 24px; text-align: center; color: var(--muted); }
+  @media (max-width: 760px) { .table-toolbar { align-items: stretch; flex-direction: column; gap: 9px; padding: 12px; } .table-search { width: 100%; margin: 0; } .filter-pill { padding-inline: 10px; } }
+</style>

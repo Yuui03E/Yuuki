@@ -1,0 +1,112 @@
+{
+  "title": "SVT-AV1-PSY vs x265",
+  "subtitle": "Illustrative data only · a short 1080p animation study. These invented values demonstrate the chart and do not support encoder performance claims.",
+  "sourceClip": "1080p / 240-frame study",
+  "date": "2026-11-11",
+  "metricsAvailable": [
+    "ssimulacra2",
+    "vmaf",
+    "butteraugli",
+    "psnr",
+    "fps"
+  ],
+  "series": [
+    {
+      "label": "SVT-AV1-PSY · preset 4",
+      "color": "#00e5ff",
+      "points": [
+        {
+          "crf": 18,
+          "preset": "4",
+          "bitrateKbps": 2800,
+          "ssimulacra2": 91.2,
+          "vmaf": 98.1,
+          "butteraugli": 0.62,
+          "psnr": 44.2,
+          "fps": 31
+        },
+        {
+          "crf": 22,
+          "preset": "4",
+          "bitrateKbps": 2050,
+          "ssimulacra2": 86.4,
+          "vmaf": 96.4,
+          "butteraugli": 0.89,
+          "psnr": 41.8,
+          "fps": 36
+        },
+        {
+          "crf": 26,
+          "preset": "4",
+          "bitrateKbps": 1440,
+          "ssimulacra2": 79.1,
+          "vmaf": 93.7,
+          "butteraugli": 1.28,
+          "psnr": 38.9,
+          "fps": 41
+        },
+        {
+          "crf": 30,
+          "preset": "4",
+          "bitrateKbps": 980,
+          "ssimulacra2": 70.5,
+          "vmaf": 89.2,
+          "butteraugli": 1.83,
+          "psnr": 36.1,
+          "fps": 47
+        }
+      ]
+    },
+    {
+      "label": "x265 · slow",
+      "color": "#a855f7",
+      "points": [
+        {
+          "crf": 14,
+          "preset": "slow",
+          "bitrateKbps": 3450,
+          "ssimulacra2": 90.5,
+          "vmaf": 97.6,
+          "butteraugli": 0.69,
+          "psnr": 44.2,
+          "fps": 18
+        },
+        {
+          "crf": 18,
+          "preset": "slow",
+          "bitrateKbps": 2640,
+          "ssimulacra2": 85.7,
+          "vmaf": 95.9,
+          "butteraugli": 0.96,
+          "psnr": 41.8,
+          "fps": 21
+        },
+        {
+          "crf": 22,
+          "preset": "slow",
+          "bitrateKbps": 1880,
+          "ssimulacra2": 78.2,
+          "vmaf": 93.2,
+          "butteraugli": 1.35,
+          "psnr": 38.9,
+          "fps": 26
+        },
+        {
+          "crf": 26,
+          "preset": "slow",
+          "bitrateKbps": 1320,
+          "ssimulacra2": 68.7,
+          "vmaf": 88.7,
+          "butteraugli": 1.9000000000000001,
+          "psnr": 36.1,
+          "fps": 30
+        }
+      ]
+    }
+  ],
+  "takeaways": [
+    "Compare quality at a shared bitrate; CRF scales differ between encoders.",
+    "Lower Butteraugli is better. FPS measures speed, not fidelity.",
+    "Replace this dataset with measured values and include software versions and hardware."
+  ]
+}

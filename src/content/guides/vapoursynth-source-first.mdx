@@ -1,0 +1,66 @@
+---
+title: A source-first VapourSynth pipeline
+description: Build a small, reproducible filter chain, then inspect what each stage changes before
+  adding the next.
+category: Filtering
+difficulty: Intermediate
+os:
+  - Windows
+  - Linux
+updatedDate: 2026-11-11
+tags:
+  - VapourSynth
+  - Debanding
+  - QC
+featured: true
+draft: false
+---
+
+## Start with a source inspection
+
+Choose several representative scenes: motion, flat gradients, fine lineart, and dark texture. Keep their frame numbers in a notebook. One attractive screenshot cannot represent an entire episode.
+
+> Treat filters as targeted repairs. Keep an unfiltered reference available throughout the workflow.
+
+### Load the source
+
+Install VapourSynth and a compatible source plugin first. Plugin availability varies by operating system.
+
+~~~python
+import vapoursynth as vs
+core = vs.core
+source = core.lsmas.LWLibavSource("source.mkv")
+source.set_output()
+~~~
+
+## Filter one problem at a time
+
+Test debanding conservatively. Compare gradients at native resolution and check that texture and thin strokes survive. Avoid a global setting that repairs one scene and harms the rest.
+
+### A minimal debanding study
+
+~~~python
+# Requires the f3kdb plugin. These are starting values, not universal settings.
+filtered = core.f3kdb.Deband(
+    source, range=12, y=48, cb=32, cr=32,
+    grainy=0, grainc=0, output_depth=10
+)
+filtered.set_output()
+~~~
+
+## Export and encode a short test
+
+Encode a small section before committing to the full run. Record the plugin versions, script, encoder build, and parameters so the result can be reproduced.
+
+~~~bash
+vspipe --y4m pipeline.vpy - | SvtAv1EncApp -i stdin -b test.ivf --crf 22 --preset 4
+~~~
+
+## Review at native pixels
+
+Use the [comparison bench](/comparisons/) to practice split and instant-toggle inspection. The included SVG pairs demonstrate the interface; replace them with lossless frame exports for actual QC.
+
+- Compare the same frame number and color conversion.
+- Inspect lineart, gradients, and texture separately.
+- Review motion as well as individual still frames.
+- Save notes on any scene-specific overrides.

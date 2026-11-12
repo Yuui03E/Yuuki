@@ -1,0 +1,104 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import Field from './Field.astro';
+import Icon from '../Icon.astro';
+interface Props { anime: CollectionEntry<'anime'>[]; }
+const { anime } = Astro.props;
+const specs = [
+  { name: 'source', label: 'Source', placeholder: 'JP BD / WEB / hybrid' },
+  { name: 'container', label: 'Container', value: 'MKV' },
+  { name: 'resolution', label: 'Resolution', placeholder: '1920×1080' },
+  { name: 'frameRate', label: 'Frame rate', placeholder: '23.976' },
+  { name: 'videoCodec', label: 'Video codec', placeholder: 'AV1 / HEVC' },
+  { name: 'videoProfile', label: 'Video profile', placeholder: 'Main 10' },
+  { name: 'bitDepth', label: 'Bit depth', type: 'number', placeholder: '10' },
+  { name: 'bitrate', label: 'Video bitrate', placeholder: '1.8 Mb/s' },
+  { name: 'fileSize', label: 'File size', placeholder: '386 MiB' },
+  { name: 'crc32', label: 'CRC32', placeholder: 'A3C91F2E' },
+] as const;
+const groups = [
+  { name: 'downloads', title: 'Download links', singular: 'download', note: 'Add a mirror or magnet. All download links are optional.', fields: [{ key: 'label', label: 'Label', placeholder: 'Torrent / Mirror', required: true }, { key: 'url', label: 'URL or magnet', placeholder: 'https://… or magnet:?xt=…', required: true }, { key: 'provider', label: 'Provider', placeholder: 'Nyaa / direct' }] },
+  { name: 'audioTracks', title: 'Audio tracks', singular: 'audio track', fields: [{ key: 'language', label: 'Language', placeholder: 'Japanese' }, { key: 'codec', label: 'Codec', placeholder: 'Opus' }, { key: 'channels', label: 'Channels', placeholder: '2.0' }, { key: 'bitrate', label: 'Bitrate', placeholder: '192 kb/s' }, { key: 'title', label: 'Track title' }, { key: 'isDefault', label: 'Default', type: 'checkbox' }] },
+  { name: 'subtitleTracks', title: 'Subtitle tracks', singular: 'subtitle track', fields: [{ key: 'language', label: 'Language', placeholder: 'English' }, { key: 'format', label: 'Format', placeholder: 'ASS' }, { key: 'title', label: 'Track title' }, { key: 'isDefault', label: 'Default', type: 'checkbox' }, { key: 'forced', label: 'Forced', type: 'checkbox' }] },
+  { name: 'screenshots', title: 'Screenshots', singular: 'screenshot', note: 'Place images in public/images/ and use /images/name.png, or enter an HTTPS URL.', fields: [{ key: 'src', label: 'Image path', placeholder: '/images/frame-01.png', required: true }, { key: 'caption', label: 'Caption' }, { key: 'frameNumber', label: 'Frame number', type: 'number' }, { key: 'timestamp', label: 'Timestamp', placeholder: '00:03:14.320' }] },
+  { name: 'comparisons', title: 'Frame comparison pairs', singular: 'comparison', note: 'Use source and encode images with identical dimensions for accurate inspection.', fields: [{ key: 'title', label: 'Comparison title', required: true }, { key: 'sourceImage', label: 'Source image', placeholder: '/images/source.png', required: true }, { key: 'encodeImage', label: 'Encode image', placeholder: '/images/encode.png', required: true }, { key: 'sourceLabel', label: 'Source label', value: 'Source' }, { key: 'encodeLabel', label: 'Encode label', value: 'Encode' }, { key: 'frameNumber', label: 'Frame number', type: 'number' }, { key: 'note', label: 'Inspection note' }] },
+  { name: 'changelog', title: 'Changelog', singular: 'changelog entry', fields: [{ key: 'version', label: 'Version', value: 'v1', required: true }, { key: 'date', label: 'Date', type: 'date', required: true }, { key: 'notes', label: 'Change notes', required: true }] },
+] as const;
+---
+<div class="studio-shell" data-studio>
+  <div class="page-heading"><div class="eyebrow">Local workbench <span class="badge badge-violet">DEV ONLY</span></div><h1>Publishing studio<span class="cyan">.</span></h1><p>Build an entry, inspect the details, and save it directly to your local archive.</p></div>
+  <div class="studio-notice"><Icon name="terminal" size={16}/><span>Local content only · Existing files are preserved · Drafts stay out of public pages and search</span></div>
+  <div class="studio-tabs" role="tablist" aria-label="Content type"><button id="anime-tab" type="button" role="tab" aria-controls="anime-panel" aria-selected="true" data-studio-tab="anime"><span class="mono">01</span> Anime / Manga</button><button id="episode-tab" type="button" role="tab" aria-controls="episode-panel" aria-selected="false" tabindex="-1" data-studio-tab="episode"><span class="mono">02</span> Episode / Batch</button><button id="guide-tab" type="button" role="tab" aria-controls="guide-panel" aria-selected="false" tabindex="-1" data-studio-tab="guide"><span class="mono">03</span> Tutorial guide</button></div>
+  <section id="anime-panel" role="tabpanel" aria-labelledby="anime-tab" data-studio-panel="anime"><div class="anilist-box panel"><div class="anilist-heading"><h2>AniList auto-fill</h2><span class="mono subtle">OPTIONAL · MANUAL ENTRY BELOW</span></div><p>Search a title, paste an AniList URL, or enter its numeric ID.</p><div class="anilist-controls"><label class="sr-only" for="anilist-query">Search AniList</label><input id="anilist-query" type="search" data-anilist-query placeholder="e.g. Frieren or anilist.co/anime/154587" autocomplete="off"/><label class="sr-only" for="anilist-type">AniList media type</label><select id="anilist-type" data-anilist-type><option value="ANIME">Anime</option><option value="MANGA">Manga</option></select><button type="button" class="button" data-anilist-search><Icon name="search" size={15}/> Search</button></div><p class="anilist-status" data-anilist-status role="status"></p><div class="anilist-results" data-anilist-results></div></div>
+    <form data-studio-form="anime" class="studio-form panel"><div class="form-heading"><h2>Archive entry</h2><span class="mono subtle">src/content/anime/</span></div><div class="field-grid"><Field name="title" label="English / display title" required/><Field name="romajiTitle" label="Romaji title"/><Field name="japaneseTitle" label="Japanese title"/><Field name="mediaType" label="Media type" options={['ANIME', 'MANGA']} value="ANIME"/><Field name="anilistId" label="AniList ID" type="number"/><Field name="format" label="Format" placeholder="TV / MOVIE / MANGA"/><Field name="season" label="Season" placeholder="FALL"/><Field name="year" label="Year" type="number"/><Field name="totalEpisodes" label="Total episodes / chapters" type="number"/><Field name="completedEpisodes" label="Completed episodes / chapters" type="number"/><Field name="status" label="Archive status" options={['Ongoing', 'Completed', 'Planned', 'Paused']} value="Planned" help="Adjust this after importing AniList metadata."/><Field name="sourceType" label="Source type" options={['BD', 'UHD-BD', 'WEB', 'DVD', 'Digital', 'Hybrid']} value="BD"/><Field name="releaseTag" label="Release tag" value="[Yuuki]"/><Field name="defaultCodec" label="Default codec" placeholder="AV1 / HEVC"/><Field name="coverImage" label="Cover image" placeholder="/images/cover.svg or https://…" required/><Field name="bannerImage" label="Banner image" placeholder="/images/banner.svg or https://…"/><Field name="studios" label="Studios" placeholder="Comma-separated names"/><Field name="tags" label="Genres / tags" placeholder="Adventure, Fantasy, Drama"/><Field name="synopsis" label="Synopsis" type="textarea" rows={5} required wide/><Field name="body" label="Archive notes (Markdown / MDX)" type="textarea" rows={5} wide placeholder="Optional notes about your source or release plan."/><Field name="slug" label="Content ID" placeholder="Generated from the title when left blank" help="Use a new ID for each entry. Existing content is never overwritten." wide/></div><div class="form-bottom"><div class="checkboxes"><label><input name="featured" type="checkbox"/> Featured on home</label><label><input name="draft" type="checkbox"/> Save as draft</label></div><button type="submit" class="button button-primary"><Icon name="check" size={15}/> Save to Local Content</button></div><div class="save-result" role="status" aria-live="polite" data-save-result></div></form>
+  </section>
+  <section id="episode-panel" role="tabpanel" aria-labelledby="episode-tab" data-studio-panel="episode" hidden><form data-studio-form="episode" class="studio-form panel"><div class="form-heading"><h2>Episode / batch release</h2><span class="mono subtle">src/content/episodes/</span></div><div class="field-grid"><label class="native-field"><span>Anime / manga <i>*</i></span><select name="anime" required><option value="">Select an archive entry</option>{anime.map((entry) => <option value={entry.id}>{entry.data.title} ({entry.data.mediaType}){entry.data.draft ? ' · draft' : ''}</option>)}</select></label><Field name="episodeNumber" label="Episode number / batch label" placeholder="01 or 01–12 Batch" required/><Field name="title" label="Release subtitle" placeholder="The Journey's End"/><Field name="releaseDate" label="Release date" type="date" required/><Field name="version" label="Version" value="v1"/><Field name="releaseTag" label="Release tag" value="[Yuuki]"/><Field name="thumbnail" label="Thumbnail" placeholder="/images/frame.png"/><Field name="slug" label="Content ID" help="Generated from the entry, episode label, and version if blank."/></div><div class="checkboxes batch-check"><label><input name="isBatch" type="checkbox"/> This is a batch release</label></div><details class="studio-details" open><summary>Technical specifications <span class="mono">OPTIONAL</span></summary><div class="field-grid specs-grid">{specs.map((spec) => <Field {...spec}/>)}</div></details>
+    {groups.map((group) => <section class="repeater-section" data-repeater={group.name}><div class="repeater-heading"><h3>{group.title}</h3><button type="button" class="button add-row" data-add-row><Icon name="plus" size={13}/> Add {group.singular}</button></div>{'note' in group && <p>{group.note}</p>}<div data-rows></div><template><div class="repeat-row"><div class="repeat-fields">{group.fields.map((field) => <label class:list={['repeat-field', { 'row-check': 'type' in field && field.type === 'checkbox' }]}><span>{field.label}</span><input data-key={field.key} type={'type' in field ? field.type : 'text'} value={'value' in field ? field.value : undefined} placeholder={'placeholder' in field ? field.placeholder : undefined} required={'required' in field ? field.required : false} min={'type' in field && field.type === 'number' ? 0 : undefined}/></label>)}</div><button type="button" class="icon-button remove-row" data-remove-row aria-label={`Remove ${group.singular}`}><Icon name="close" size={14}/></button></div></template></section>)}
+    <details class="studio-details"><summary>Encoder, filtering, and MediaInfo <span class="mono">OPTIONAL</span></summary><div class="field-grid"><Field name="encoderParams" label="Encoder parameters" type="textarea" rows={5} wide placeholder="SvtAv1EncApp --crf 22 --preset 4 …"/><Field name="filterScript" label="VapourSynth filter script" type="textarea" rows={7} wide placeholder="import vapoursynth as vs …"/><Field name="mediainfo" label="MediaInfo" type="textarea" rows={8} wide placeholder="Paste the full MediaInfo text report."/></div></details><div class="field-grid notes-field"><Field name="body" label="Release notes (Markdown / MDX)" type="textarea" rows={6} wide/></div><div class="form-bottom"><label class="checkbox-label"><input name="draft" type="checkbox"/> Save as draft</label><button type="submit" class="button button-primary"><Icon name="check" size={15}/> Save to Local Content</button></div><div class="save-result" role="status" aria-live="polite" data-save-result></div></form></section>
+  <section id="guide-panel" role="tabpanel" aria-labelledby="guide-tab" data-studio-panel="guide" hidden><form data-studio-form="guide" class="studio-form panel"><div class="form-heading"><h2>Tutorial guide</h2><span class="mono subtle">src/content/guides/</span></div><div class="field-grid"><Field name="title" label="Guide title" required/><Field name="slug" label="Content ID" placeholder="Generated from the title when blank"/><Field name="description" label="Short description" type="textarea" rows={2} required wide/><Field name="category" label="Category" options={['Encoding', 'Filtering', 'Playback', 'Tools', 'Workflow']} value="Encoding"/><Field name="difficulty" label="Difficulty" options={['Beginner', 'Intermediate', 'Advanced']} value="Beginner"/><Field name="os" label="Operating systems" placeholder="Windows, Linux"/><Field name="updatedDate" label="Updated date" type="date" required/><Field name="tags" label="Tags" placeholder="Comma-separated index terms" wide/></div><div class="editor-heading"><h3>Guide body</h3><span class="mono subtle">MARKDOWN / MDX</span></div><div class="editor-grid"><label class="editor-panel"><span class="editor-label mono">WRITE</span><textarea name="body" data-guide-editor required spellcheck="false" rows={20} placeholder="## Overview&#10;&#10;Write your guide here.&#10;&#10;### Step one&#10;&#10;Add code, notes, and clear examples."></textarea></label><div class="preview-panel"><span class="editor-label mono">LIVE PREVIEW</span><div class="prose" data-guide-preview><p>Your guide preview will appear here.</p></div></div></div><p class="preview-note">Markdown and safe HTML appear here as you type. Custom MDX components render in the saved guide; MDX syntax is checked before saving.</p><div class="form-bottom"><div class="checkboxes"><label><input name="featured" type="checkbox"/> Featured guide</label><label><input name="draft" type="checkbox"/> Save as draft</label></div><button type="submit" class="button button-primary"><Icon name="check" size={15}/> Save to Local Content</button></div><div class="save-result" role="status" aria-live="polite" data-save-result></div></form></section>
+  <noscript><p class="studio-notice">Enable JavaScript to use local publishing, AniList auto-fill, and live preview.</p></noscript>
+</div>
+<style>
+  .studio-shell { max-width: 1150px; margin-inline: auto; }
+  .studio-notice { display: flex; align-items: center; gap: 10px; font-size: .76rem; padding: 12px 16px; color: var(--violet); background: var(--violet-wash); border: 1px solid rgb(168 85 247 / 20%); border-radius: 5px; }
+  .studio-tabs { display: flex; gap: 6px; margin: 22px 0; border-bottom: 1px solid var(--border); }
+  .studio-tabs button { color: var(--muted); background: transparent; padding: 13px 18px; border-bottom: 2px solid transparent; font-size: .83rem; }
+  .studio-tabs button span { color: var(--subtle); margin-right: 8px; font-size: .69rem; }
+  .studio-tabs button[aria-selected='true'] { color: var(--cyan); border-bottom-color: var(--cyan); }
+  .anilist-box { padding: 22px; margin-bottom: 18px; }
+  .anilist-heading, .form-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .anilist-heading span, .form-heading span { font-size: .6rem; }
+  .anilist-box p { color: var(--muted); font-size: .79rem; margin-top: 8px; }
+  .anilist-controls { display: flex; align-items: center; gap: 10px; margin-top: 17px; }
+  .anilist-controls input { flex: 1; }
+  .anilist-controls select { width: 120px; }
+  .anilist-status { min-height: 18px; font-size: .74rem !important; }
+  .anilist-results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  .anilist-results :global(button) { display: flex; align-items: center; gap: 12px; padding: 8px; text-align: left; border: 1px solid var(--border); background: var(--surface-hover); border-radius: 5px; }
+  .anilist-results :global(button:hover) { border-color: var(--cyan); }
+  .anilist-results :global(img) { width: 42px; height: 58px; object-fit: cover; border-radius: 3px; }
+  .anilist-results :global(strong) { display: block; font-weight: 550; font-size: .79rem; }
+  .anilist-results :global(small) { display: block; color: var(--subtle); font: .64rem var(--font-mono); margin-top: 4px; }
+  .studio-form { padding: 24px; }
+  .form-heading { margin-bottom: 22px; padding-bottom: 17px; border-bottom: 1px solid var(--border); }
+  h2 { font-size: 1.15rem; }
+  .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px 20px; }
+  .native-field { display: flex; flex-direction: column; gap: 6px; font-size: .78rem; color: var(--muted); }
+  .native-field i { color: var(--cyan); font-style: normal; }
+  .checkboxes { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; }
+  .checkboxes label, .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: .76rem; color: var(--muted); }
+  input[type='checkbox'] { width: 14px; height: 14px; padding: 0; accent-color: var(--cyan); }
+  .form-bottom { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+  .batch-check { margin-top: 18px; }
+  .studio-details { margin-top: 22px; border: 1px solid var(--border); border-radius: 5px; }
+  .studio-details summary { padding: 12px 15px; color: var(--muted); font-size: .83rem; }
+  .studio-details summary span { float: right; font-size: .59rem; color: var(--subtle); margin-top: 3px; }
+  .studio-details > .field-grid { padding: 16px; border-top: 1px solid var(--border); }
+  .specs-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .repeater-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .repeater-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h3 { font-size: .96rem; }
+  .add-row { font-size: .7rem; min-height: 30px; padding: 5px 9px; }
+  .repeater-section > p { color: var(--subtle); font-size: .69rem; margin-top: 7px; }
+  .repeat-row { position: relative; margin-top: 12px; padding: 14px 50px 14px 14px; border: 1px solid var(--border); background: var(--canvas); border-radius: 5px; }
+  .repeat-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .repeat-field { display: flex; flex-direction: column; gap: 5px; font-size: .69rem; color: var(--muted); }
+  .repeat-field input { padding: 7px 9px; font-size: .77rem; }
+  .row-check { flex-direction: row; align-items: center; justify-content: flex-start; }
+  .remove-row { position: absolute; right: 9px; top: 14px; width: 28px; height: 28px; }
+  .notes-field { margin-top: 23px; }
+  .save-result { font-size: .8rem; color: var(--green); margin-top: 14px; overflow-wrap: anywhere; }
+  .save-result[data-error='true'] { color: var(--amber); }
+  .save-result :global(a) { color: var(--cyan); text-decoration: underline; margin-left: 10px; }
+  .editor-heading { display: flex; justify-content: space-between; gap: 12px; margin: 25px 0 12px; }
+  .editor-heading span { font-size: .6rem; }
+  .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .editor-panel, .preview-panel { border: 1px solid var(--border); border-radius: 5px; overflow: hidden; background: var(--canvas); min-width: 0; }
+  .editor-label { display: block; padding: 9px 13px; color: var(--subtle); font-size: .62rem; border-bottom: 1px solid var(--border); background: var(--surface); letter-spacing: .06em; }
+  .editor-panel textarea { border: 0; border-radius: 0; background: transparent; min-height: 500px; font: .8rem/1.8 var(--font-mono); padding: 15px; resize: vertical; }
+  .preview-panel > div { padding: 16px; max-height: 650px; overflow: auto; font-size: .86rem; overflow-wrap: anywhere; }
+  .preview-note { margin-top: 10px; font-size: .67rem; color: var(--subtle); }
+  :global([aria-invalid='true']) { border-color: var(--amber); }
+  @media (max-width: 760px) { .studio-tabs { gap: 0; } .studio-tabs button { padding: 12px 9px; font-size: .74rem; } .studio-tabs button span { display: none; } .studio-form, .anilist-box { padding: 16px; } .field-grid, .specs-grid { gap: 15px; } .form-bottom { align-items: flex-start; flex-direction: column; } .form-bottom > button { width: 100%; } .repeat-fields { grid-template-columns: 1fr 1fr; } .editor-grid { grid-template-columns: 1fr; } .anilist-controls { flex-wrap: wrap; } .anilist-controls input { flex-basis: 100%; } .anilist-results { grid-template-columns: 1fr; } }
+  @media (max-width: 480px) { .field-grid, .specs-grid, .repeat-fields { grid-template-columns: 1fr; } .form-heading span { display: none; } .anilist-heading span { display: none; } .studio-notice { font-size: .67rem; } }
+</style>

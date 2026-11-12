@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AnimeCard from '../components/AnimeCard.astro';
+import GuideCard from '../components/GuideCard.astro';
+import ReleasesTable from '../components/ReleasesTable.astro';
+import Icon from '../components/Icon.astro';
+import { getArchive, formatDate, pathFor } from '../lib/archive';
+const archive = await getArchive();
+const featured = archive.anime.filter((entry) => entry.data.featured);
+const active = archive.progress.find((entry) => entry.data.stage !== 'Completed');
+const activeAnime = active?.data.relatedAnime && archive.anime.find((entry) => entry.id === active.data.relatedAnime?.id);
+---
+<BaseLayout title="Home">
+  <section class="hero"><div class="hero-copy"><span class="eyebrow">Independent encodes. Open field notes.</span><h1>Care in <span>every frame.</span></h1><p>An anime archive for the details that matter. Thoughtful encodes, transparent release notes, and a closer look at the pixels.</p><div class="hero-actions"><a href="/releases/" class="button button-primary">Browse releases <Icon name="arrow" size={15}/></a><a href="/guides/" class="text-link"><Icon name="book" size={15}/> Read the field notes</a></div><div class="hero-stats mono"><span><strong>{archive.anime.length.toString().padStart(2, '0')}</strong> SERIES</span><span><strong>{archive.episodes.length.toString().padStart(2, '0')}</strong> RELEASES</span><span><strong>{archive.guides.length.toString().padStart(2, '0')}</strong> GUIDES</span><span class="archive-tag">[Yuuki]</span></div></div><div class="hero-art"><img src="/images/observatory.svg" width="960" height="560" alt="Illustrated observatory under a starry teal night sky" fetchpriority="high"/><span class="art-caption mono"><i></i> THE FRAME IS THE REFERENCE <span>01 / 01</span></span></div></section>
+  {active && <div class="status-strip panel"><span class="status-live mono"><i></i> ON THE WORKBENCH</span><span>{activeAnime ? <a href={pathFor('anime', activeAnime.id)}>{activeAnime.data.title}</a> : active.data.title}</span><span class="badge badge-violet">{active.data.stage}</span><span class="status-detail">{active.data.title}</span><a href="/about/#progress" class="text-link">Activity log <Icon name="arrow" size={13}/></a></div>}
+  <section class="home-section"><div class="section-heading"><h2><Icon name="layers"/> In the archive <span class="count">{featured.length}</span></h2><a href="/anime/" class="text-link">View archive <Icon name="arrow" size={14}/></a></div><div class="featured-grid">{featured.map((entry) => <AnimeCard entry={entry} compact/>)}</div>{featured.length === 0 && <p class="empty-state">Featured series will appear here.</p>}</section>
+  <section class="home-section"><div class="section-heading"><h2><Icon name="download"/> Latest releases <span class="count">{archive.episodes.length}</span></h2><a href="/releases/" class="text-link">All releases <Icon name="arrow" size={14}/></a></div><ReleasesTable episodes={archive.episodes.slice(0, 6)} anime={archive.anime}/></section>
+  <section class="home-section"><div class="section-heading"><h2><Icon name="book"/> From the field notes</h2><a href="/guides/" class="text-link">Guide library <Icon name="arrow" size={14}/></a></div><div class="guides-grid">{archive.guides.slice(0, 3).map((entry, index) => <GuideCard entry={entry} index={index}/>)}</div></section>
+  <div class="archive-note mono"><span>SAMPLE ARCHIVE · LOCAL SVG ART & ILLUSTRATIVE METRICS</span><span>LAST RELEASE {archive.episodes[0] ? formatDate(archive.episodes[0].data.releaseDate).toUpperCase() : '—'}</span></div>
+</BaseLayout>
+<style>
+  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; padding: 44px 0 32px; }
+  .hero-copy { padding-block: 12px; }
+  h1 { margin-top: 18px; font-size: clamp(2.8rem, 4.5vw, 5rem); line-height: 1.06; letter-spacing: -.06em; }
+  h1 span { display: block; color: var(--cyan); }
+  .hero-copy > p { color: var(--muted); font-size: .97rem; line-height: 1.8; max-width: 470px; margin-top: 21px; }
+  .hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; margin-top: 25px; }
+  .hero-stats { display: flex; gap: 30px; align-items: center; border-top: 1px solid var(--border); margin-top: 32px; padding-top: 19px; color: var(--subtle); font-size: .6rem; }
+  .hero-stats strong { color: var(--text); font-size: 1.16rem; font-weight: 500; margin-right: 6px; }
+  .archive-tag { margin-left: auto; color: var(--cyan); font-size: .85rem; }
+  .hero-art { position: relative; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #080a0e; }
+  .hero-art img { width: 100%; height: auto; }
+  .art-caption { display: flex; align-items: center; gap: 8px; position: absolute; bottom: 0; inset-inline: 0; padding: 12px 16px; font-size: .56rem; color: #94a2b8; background: #080a0ef0; border-top: 1px solid #1b202c; letter-spacing: .07em; }
+  .art-caption i { width: 5px; height: 5px; background: #00e5ff; border-radius: 50%; }
+  .art-caption span { margin-left: auto; }
+  .status-strip { display: flex; align-items: center; gap: 15px; padding: 12px 16px; font-size: .78rem; }
+  .status-live { display: flex; align-items: center; gap: 8px; color: var(--green); font-size: .58rem; letter-spacing: .05em; }
+  .status-live i { height: 6px; width: 6px; background: var(--green); border-radius: 50%; }
+  .status-strip > a { margin-left: auto; font-size: .7rem; }
+  .status-detail { font-size: .73rem; color: var(--subtle); }
+  .home-section { margin-top: 32px; }
+  .featured-grid, .guides-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .archive-note { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 28px; font-size: .55rem; color: var(--subtle); letter-spacing: .06em; }
+  @media (max-width: 1050px) { .hero { gap: 28px; } .status-detail { display: none; } .hero-stats { gap: 18px; } }
+  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 25px; padding-top: 26px; } .hero-copy { padding: 0; } .hero-art { max-height: 280px; } .hero-art img { height: 280px; object-fit: cover; } .featured-grid, .guides-grid { grid-template-columns: 1fr; } .status-strip { flex-wrap: wrap; gap: 10px; } .status-live { flex-basis: 100%; } .hero-stats { gap: 16px; } .hero-stats strong { font-size: 1rem; } .archive-tag { font-size: .7rem; } }
+</style>

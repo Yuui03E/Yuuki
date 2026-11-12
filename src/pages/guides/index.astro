@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideCard from '../../components/GuideCard.astro';
+import { getArchive } from '../../lib/archive';
+const { guides } = await getArchive();
+const categories = ['All', 'Encoding', 'Filtering', 'Playback', 'Tools', 'Workflow'];
+---
+<BaseLayout title="Technical guide library"><div class="page-heading"><span class="eyebrow">Documentation / practical field notes</span><h1>Know the pipeline<span class="cyan">.</span></h1><p>Reproducible workflows, careful filtering, and the reasoning behind the settings.</p></div><section data-guide-catalog><div class="guide-toolbar panel"><div class="pill-row" role="group" aria-label="Guide category">{categories.map((category) => <button type="button" class="filter-pill" data-catalog-filter={category.toLowerCase()} aria-pressed={category === 'All'}>{category}</button>)}</div><label><span class="sr-only">Search guides</span><input type="search" placeholder="Search field notes…" data-catalog-search/></label></div><div class="guide-grid">{guides.map((entry, index) => <GuideCard entry={entry} index={index}/>)}</div><p class="empty-state" data-catalog-empty hidden>No guides match these filters.</p><p class="catalog-count mono subtle" data-catalog-count>{guides.length} entries</p></section></BaseLayout>
+<script>import { initCatalog } from '../../scripts/catalog'; initCatalog('[data-guide-catalog]', '[data-guide-card]', 'category');</script>
+<style>.guide-toolbar { display: flex; align-items: center; gap: 18px; padding: 12px 16px; margin-bottom: 20px; } label { width: 250px; margin-left: auto; } input { font-size: .8rem; padding-block: 7px; } .guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } .catalog-count { margin-top: 17px; font-size: .65rem; } @media (max-width: 1100px) { .guide-toolbar { flex-wrap: wrap; } .guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } } @media (max-width: 760px) { .guide-grid { grid-template-columns: 1fr; } label { width: 100%; } }</style>

@@ -1,0 +1,19 @@
+---
+interface Props { title: string; code?: string; id: string; language?: string; open?: boolean; }
+const { title, code, id, language = 'TEXT', open = false } = Astro.props;
+---
+{code && <details class="tech-accordion panel" open={open}><summary><span class="tech-title">{title}<span class="language mono">{language}</span></span><button type="button" data-copy-target={`${id}-code`} class="copy-button" aria-label={`Copy ${title}`}>Copy</button></summary><pre id={`${id}-code`}><code>{code}</code></pre></details>}
+<script>import { initCopyButtons } from '../scripts/copy'; initCopyButtons();</script>
+<style>
+  .tech-accordion { overflow: hidden; }
+  summary { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; gap: 12px; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  .tech-title { display: flex; align-items: center; gap: 10px; font-size: .84rem; }
+  .tech-title::before { content: '+'; color: var(--cyan); font: 1rem var(--font-mono); width: 12px; }
+  details[open] .tech-title::before { content: '−'; }
+  .language { color: var(--subtle); font-size: .59rem; }
+  .copy-button { padding: 4px 9px; background: var(--surface-hover); border: 1px solid var(--border-strong); border-radius: 4px; color: var(--muted); font: .66rem var(--font-mono); }
+  .copy-button:hover { color: var(--cyan); }
+  pre { margin: 0; padding: 16px; border-top: 1px solid var(--border); background: var(--surface-hover); overflow-x: auto; font: .76rem/1.8 var(--font-mono); color: var(--muted); max-height: 460px; }
+  code { font-size: inherit; }
+</style>

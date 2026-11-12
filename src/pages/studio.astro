@@ -1,0 +1,13 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+if (!import.meta.env.DEV) return Astro.redirect('/');
+const { default: Studio } = await import('../components/studio/Studio.astro');
+const anime = (await getCollection('anime')).sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+<BaseLayout title="Local publishing studio" description="Yuuki's local content authoring workbench."><Studio anime={anime}/></BaseLayout>
+<script>
+  if (import.meta.env.DEV) {
+    import('../scripts/studio').then(({ initStudio }) => initStudio());
+  }
+</script>

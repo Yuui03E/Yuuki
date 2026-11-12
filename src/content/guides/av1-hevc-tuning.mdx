@@ -1,0 +1,52 @@
+---
+title: "AV1 or HEVC: tune for the frame"
+description: Use short encode sweeps and perceptual metrics to choose settings without losing sight
+  of the source.
+category: Encoding
+difficulty: Beginner
+os:
+  - Windows
+  - Linux
+updatedDate: 2026-11-09
+tags:
+  - AV1
+  - HEVC
+  - SSIMULACRA 2
+  - Playback
+featured: true
+draft: false
+---
+
+## Define the playback target
+
+Start with the devices that need to play the release. Check container, bit depth, subtitle handling, and hardware decoding support using a short sample.
+
+## Build a small CRF sweep
+
+Choose a fixed preset and vary the quality control. Keep source frames, color conversions, and filter settings identical between tests.
+
+### AV1 test command
+
+~~~bash
+SvtAv1EncApp -i sample.y4m -b sample.ivf --crf 22 --preset 4
+~~~
+
+### HEVC test command
+
+~~~bash
+x265 --input sample.y4m --y4m --crf 17 --preset slow --profile main10 --output sample.hevc
+~~~
+
+CRF values are encoder-specific. AV1 CRF 22 and x265 CRF 22 do not imply equal fidelity or equal file size.
+
+## Read metrics with their limits
+
+SSIMULACRA 2 and VMAF can help identify promising candidates. PSNR reports pixel error, while Butteraugli measures perceptual difference. **Lower Butteraugli is better.** FPS measures encoding speed rather than image fidelity.
+
+> Metrics are a screening tool. Always inspect fine lineart, intentional grain, and difficult motion directly.
+
+## Choose and document the result
+
+Use the [rate–distortion notebook](/comparisons/#benchmark-av1-vs-x265) to explore how bitrate and CRF change the view. Its sample values are illustrative and cannot establish an encoder ranking.
+
+Record the exact encoder build, CPU, preset, test clip, filter chain, and metric implementation with your own measurements. Include the final command and playback notes in the release notebook.

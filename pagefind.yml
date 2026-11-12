@@ -1,0 +1,2 @@
+# Index only explicit public content roots; redirect pages are excluded.
+root_selector: "[data-pagefind-body]"

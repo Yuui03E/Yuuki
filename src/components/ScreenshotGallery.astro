@@ -1,0 +1,43 @@
+---
+import type { EpisodeEntry } from '../lib/archive';
+import Icon from './Icon.astro';
+type Screenshot = NonNullable<EpisodeEntry['data']['screenshots']>[number];
+interface Props { screenshots?: Screenshot[]; id: string; }
+const { screenshots = [], id } = Astro.props;
+---
+{screenshots.length > 0 && <div data-gallery class="screenshot-gallery"><div class="gallery-grid">{screenshots.map((shot, index) => <button type="button" data-gallery-open data-src={shot.src} data-caption={shot.caption ?? `Screenshot ${index + 1}`} data-index={index} aria-label={`View full-size: ${shot.caption ?? `Screenshot ${index + 1}`}`}><img src={shot.src} alt={shot.caption ?? `Release screenshot ${index + 1}`} loading="lazy"/><span class="gallery-caption"><span>{shot.caption ?? `Frame ${index + 1}`}</span>{(shot.frameNumber !== undefined || shot.timestamp) && <span class="mono">{shot.timestamp ?? `#${shot.frameNumber}`}</span>}<Icon name="external" size={12}/></span></button>)}</div><dialog id={`${id}-lightbox`} class="lightbox" aria-label="Full-size release screenshot"><div class="lightbox-top"><span data-lightbox-caption></span><button class="icon-button" type="button" data-gallery-close aria-label="Close screenshot"><Icon name="close" size={18}/></button></div><div class="lightbox-image"><img data-lightbox-image alt=""/></div><div class="lightbox-bottom"><button type="button" class="button" data-gallery-prev aria-label="Previous screenshot">← Previous</button><a data-lightbox-original target="_blank" rel="noreferrer" class="text-link">Open original image <Icon name="external" size={12}/></a><button type="button" class="button" data-gallery-next aria-label="Next screenshot">Next →</button></div></dialog></div>}
+<script>
+  document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((gallery) => {
+    const dialog = gallery.querySelector<HTMLDialogElement>('dialog')!;
+    const buttons = Array.from(gallery.querySelectorAll<HTMLButtonElement>('[data-gallery-open]'));
+    const image = dialog.querySelector<HTMLImageElement>('[data-lightbox-image]')!;
+    let active = 0;
+    const show = (index: number) => {
+      active = (index + buttons.length) % buttons.length; const shot = buttons[active];
+      image.src = shot.dataset.src!; image.alt = shot.dataset.caption!;
+      dialog.querySelector('[data-lightbox-caption]')!.textContent = `${active + 1} / ${buttons.length} · ${shot.dataset.caption}`;
+      dialog.querySelector<HTMLAnchorElement>('[data-lightbox-original]')!.href = shot.dataset.src!;
+      if (!dialog.open) dialog.showModal();
+    };
+    buttons.forEach((button, index) => button.addEventListener('click', () => show(index)));
+    dialog.querySelector('[data-gallery-close]')?.addEventListener('click', () => dialog.close());
+    dialog.querySelector('[data-gallery-prev]')?.addEventListener('click', () => show(active - 1));
+    dialog.querySelector('[data-gallery-next]')?.addEventListener('click', () => show(active + 1));
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+    dialog.addEventListener('keydown', (event) => { if (['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); show(active + (event.key === 'ArrowRight' ? 1 : -1)); } });
+  });
+</script>
+<style>
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+  .gallery-grid button { padding: 0; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .gallery-grid button:hover { border-color: var(--cyan); }
+  .gallery-grid img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+  .gallery-caption { display: flex; gap: 8px; align-items: center; padding: 9px 12px; font-size: .73rem; color: var(--muted); }
+  .gallery-caption .mono { margin-left: auto; font-size: .6rem; color: var(--subtle); }
+  .lightbox { width: min(1420px, calc(100% - 32px)); padding: 0; max-height: 94vh; }
+  .lightbox-top, .lightbox-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; font-size: .8rem; color: var(--muted); }
+  .lightbox-image { overflow: auto; max-height: 76vh; background: #000; }
+  .lightbox-image img { display: block; width: auto; max-width: none; margin-inline: auto; }
+  .lightbox-bottom .button { min-height: 30px; font-size: .72rem; padding: 5px 9px; }
+  @media (max-width: 600px) { .lightbox-bottom .text-link { font-size: .66rem; } }
+</style>

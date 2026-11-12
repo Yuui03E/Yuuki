@@ -1,0 +1,81 @@
+---
+import '../styles/tokens.css';
+import Icon from '../components/Icon.astro';
+import CommandPalette from '../components/CommandPalette.astro';
+interface Props { title: string; description?: string; searchable?: boolean; searchType?: string; image?: string; }
+const { title, description = 'A carefully encoded anime archive. Transparent releases, pixel-level comparisons, and practical technical guides. By [Yuuki].', searchable = false, searchType = 'Page', image } = Astro.props;
+const path = Astro.url.pathname;
+const links = [{ href: '/anime/', label: 'Archive' }, { href: '/releases/', label: 'Releases' }, { href: '/guides/', label: 'Guides' }, { href: '/comparisons/', label: 'Compare' }, { href: '/about/', label: 'About' }];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      try { if (localStorage.getItem('yuuki-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}
+    </script>
+    <title>{title === 'Home' ? 'Yuuki — Anime Encoding Archive' : `${title} · Yuuki`}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#000000" />
+    <meta property="og:title" content={`${title} · Yuuki`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    {image && <meta property="og:image" content={image} />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header" data-pagefind-ignore>
+      <div class="container nav-shell">
+        <a class="brand" href="/" aria-label="Yuuki home"><svg viewBox="0 0 32 36" width="30" height="34" fill="none" aria-hidden="true"><path d="M2 8v21m28-21v21" stroke="var(--violet)" stroke-width="1.5"/><path d="m7 7 9 14L25 7M16 21v10" stroke="var(--cyan)" stroke-width="3"/></svg><span class="brand-word">yuuki<span class="brand-caption">ENCODING ARCHIVE</span></span></a>
+        <nav class="desktop-nav" aria-label="Main navigation">{links.map((link) => <a href={link.href} aria-current={path.startsWith(link.href) ? 'page' : undefined}>{link.label}</a>)}</nav>
+        <div class="nav-actions"><button type="button" class="search-trigger" data-search-open aria-label="Search the archive (Ctrl+K)"><Icon name="search"/><span>Search archive</span><kbd>Ctrl K</kbd></button><button type="button" class="icon-button theme-toggle" aria-label="Switch color theme" data-theme-toggle><span class="sun-icon"><Icon name="sun"/></span><span class="moon-icon"><Icon name="moon"/></span></button><details class="mobile-menu"><summary aria-label="Open navigation"><Icon name="menu" size={20}/></summary><nav aria-label="Mobile navigation">{links.map((link) => <a href={link.href} aria-current={path.startsWith(link.href) ? 'page' : undefined}>{link.label}</a>)}</nav></details></div>
+      </div>
+    </header>
+    <main id="main" class="container" data-pagefind-body={searchable ? true : undefined} data-pagefind-ignore={!searchable ? 'all' : undefined} data-pagefind-filter={searchable ? `type:${searchType}` : undefined}><slot /></main>
+    <footer class="site-footer" data-pagefind-ignore><div class="container footer-inner"><a class="footer-brand mono" href="/"><span class="cyan">[</span> Yuuki <span class="cyan">]</span></a><span class="footer-note">Care in every frame.</span><span class="footer-meta mono">STATIC BY DESIGN <span class="footer-dot">·</span> © {new Date().getUTCFullYear()} Yuuki</span>{import.meta.env.DEV && <a href="/studio/" class="studio-link">Local studio <Icon name="external" size={12}/></a>}</div></footer>
+    <CommandPalette />
+    <script>
+      document.querySelector<HTMLButtonElement>('[data-theme-toggle]')?.addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem('yuuki-theme', next); } catch {}
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next === 'light' ? '#f5f7fa' : '#000000');
+      });
+    </script>
+  </body>
+</html>
+<style>
+  .site-header { position: sticky; top: 0; z-index: 30; background: var(--canvas); border-bottom: 1px solid var(--border); }
+  .nav-shell { display: flex; align-items: center; gap: 35px; min-height: 74px; }
+  .brand { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+  .brand-word { font-weight: 700; font-size: 1.58rem; line-height: 1; letter-spacing: -.06em; }
+  .brand-caption { display: block; margin-top: 6px; font: .49rem var(--font-mono); letter-spacing: .15em; color: var(--subtle); }
+  .desktop-nav { display: flex; align-self: stretch; gap: 26px; }
+  nav a { color: var(--muted); font-size: .84rem; }
+  .desktop-nav a { position: relative; display: flex; align-items: center; }
+  nav a:hover, nav a[aria-current] { color: var(--text); }
+  .desktop-nav a[aria-current]::after { content: ''; position: absolute; bottom: -1px; height: 2px; background: var(--cyan); left: 0; right: 0; }
+  .nav-actions { display: flex; align-items: center; gap: 9px; margin-left: auto; }
+  .search-trigger { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--subtle); font-size: .78rem; }
+  .search-trigger:hover { border-color: var(--border-strong); color: var(--muted); }
+  .search-trigger kbd { margin-left: 20px; font-size: .64rem; }
+  .mobile-menu { display: none; position: relative; }
+  .mobile-menu summary { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 5px; list-style: none; color: var(--muted); }
+  .mobile-menu summary::-webkit-details-marker { display: none; }
+  .mobile-menu nav { display: flex; flex-direction: column; gap: 15px; position: absolute; right: 0; top: 48px; width: 170px; padding: 20px; border: 1px solid var(--border-strong); background: var(--surface); border-radius: 6px; box-shadow: var(--shadow); }
+  .moon-icon { display: none; }
+  :global([data-theme='light']) .sun-icon { display: none; }
+  :global([data-theme='light']) .moon-icon { display: inline; }
+  .site-footer { margin-top: 48px; border-top: 1px solid var(--border); color: var(--subtle); }
+  .footer-inner { display: flex; align-items: center; gap: 18px; min-height: 76px; font-size: .75rem; }
+  .footer-brand { font-size: .86rem; color: var(--text); }
+  .footer-meta { margin-left: auto; font-size: .62rem; letter-spacing: .035em; }
+  .footer-dot { color: var(--border-strong); margin: 0 10px; }
+  .studio-link { display: flex; gap: 6px; align-items: center; color: var(--violet); font-size: .73rem; }
+  .skip-link { position: fixed; left: 16px; top: -80px; padding: 10px 15px; background: var(--cyan); color: var(--canvas); z-index: 100; border-radius: 4px; }
+  .skip-link:focus { top: 10px; }
+  @media (max-width: 1050px) { .nav-shell { gap: 24px; } .desktop-nav { gap: 20px; } .search-trigger span { display: none; } .search-trigger kbd { margin-left: 4px; } }
+  @media (max-width: 760px) { .nav-shell { min-height: 65px; gap: 12px; } .desktop-nav { display: none; } .mobile-menu { display: block; } .search-trigger { width: 36px; padding: 0; justify-content: center; } .search-trigger kbd { display: none; } .footer-inner { flex-wrap: wrap; gap: 9px 15px; padding-block: 20px; } .footer-meta { flex-basis: 100%; margin: 0; } .studio-link { margin-left: auto; } }
+</style>

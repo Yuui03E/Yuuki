@@ -1,0 +1,56 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import type { GuideEntry } from '../lib/archive';
+import { formatDate } from '../lib/archive';
+import Icon from '../components/Icon.astro';
+interface Heading { depth: number; slug: string; text: string; }
+interface Props { entry: GuideEntry; headings: Heading[]; readingMinutes?: number; }
+const { entry, headings, readingMinutes = 1 } = Astro.props;
+const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+const d = entry.data;
+---
+<BaseLayout title={d.title} description={d.description} searchable searchType="Guide">
+  <div class="breadcrumbs"><a href="/">Home</a><span>/</span><a href="/guides/">Guides</a><span>/</span><span>{d.category}</span></div>
+  <div class="guide-layout"><article><header class="guide-header"><span class="eyebrow">Field notes / {d.category}</span><h1 data-pagefind-meta="title">{d.title}</h1><p class="description">{d.description}</p><div class="pill-row"><span class="badge badge-violet">{d.difficulty}</span>{d.os?.map((os) => <span class="badge">{os}</span>)}<span class="guide-meta mono">Updated <time datetime={d.updatedDate.toISOString()}>{formatDate(d.updatedDate)}</time></span><span class="guide-meta mono">{readingMinutes} min read</span></div></header>
+    {toc.length > 0 && <details class="mobile-toc panel" data-pagefind-ignore><summary>On this page</summary><nav aria-label="Mobile table of contents"><ul>{toc.map((heading) => <li data-depth={heading.depth}><a href={`#${heading.slug}`}>{heading.text}</a></li>)}</ul></nav></details>}
+    <div class="prose guide-body"><slot /></div><footer class="guide-end"><span class="mono"><span class="cyan">//</span> END OF FIELD NOTE</span><a href="/guides/" class="text-link">More guides <Icon name="arrow" size={14}/></a></footer></article>
+    <aside class="guide-sidebar" data-pagefind-ignore>{toc.length > 0 && <nav class="toc" aria-label="Table of contents"><span class="toc-heading mono">ON THIS PAGE</span><ul>{toc.map((heading) => <li data-depth={heading.depth}><a href={`#${heading.slug}`} data-toc-link>{heading.text}</a></li>)}</ul></nav>}<div class="guide-tags"><span class="toc-heading mono">INDEX TERMS</span><div class="pill-row">{d.tags.map((tag) => <span class="badge">{tag}</span>)}</div></div><a class="guide-back text-link" href="/guides/"><Icon name="book" size={15}/> Guide library</a></aside>
+  </div>
+</BaseLayout>
+<script>
+  import { initCopyButtons } from '../scripts/copy';
+  document.querySelectorAll<HTMLElement>('.guide-body pre').forEach((pre, index) => {
+    pre.id ||= `guide-code-${index}`;
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'code-copy'; button.textContent = 'Copy'; button.dataset.copyTarget = pre.id; button.setAttribute('aria-label', `Copy code block ${index + 1}`); pre.append(button);
+  });
+  initCopyButtons();
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-toc-link]'));
+  const visible = new Set<string>();
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => { if (entry.isIntersecting) visible.add(entry.target.id); else visible.delete(entry.target.id); });
+    const active = links.find((link) => visible.has(decodeURIComponent(link.hash.slice(1))));
+    links.forEach((link) => { if (link === active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); });
+  }, { rootMargin: '-100px 0px -60% 0px' });
+  document.querySelectorAll('.guide-body h2, .guide-body h3').forEach((heading) => observer.observe(heading));
+</script>
+<style>
+  .guide-layout { display: grid; grid-template-columns: minmax(0, 850px) 235px; justify-content: center; gap: 64px; padding-bottom: 15px; }
+  .guide-header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 24px; }
+  h1 { font-size: clamp(2rem, 3.7vw, 2.8rem); margin: 12px 0 16px; max-width: 820px; line-height: 1.2; }
+  .description { color: var(--muted); font-size: 1rem; line-height: 1.8; margin-bottom: 20px; }
+  .guide-meta { color: var(--subtle); font-size: .64rem; margin-left: 8px; }
+  .guide-sidebar { position: sticky; top: 104px; align-self: start; border-left: 1px solid var(--border); padding-left: 24px; margin-top: 9px; }
+  .toc-heading { display: block; font-size: .61rem; letter-spacing: .09em; color: var(--subtle); margin-bottom: 14px; }
+  .toc ul, .mobile-toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc li, .mobile-toc li { padding-bottom: 11px; line-height: 1.5; font-size: .77rem; color: var(--muted); }
+  li[data-depth='3'] { padding-left: 14px; font-size: .72rem; }
+  .toc a:hover, .toc a[aria-current] { color: var(--cyan); }
+  .guide-tags { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .guide-tags .badge { font-size: .6rem; }
+  .guide-back { margin-top: 25px; font-size: .74rem; }
+  .guide-end { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 18px; display: flex; justify-content: space-between; gap: 12px; color: var(--subtle); font-size: .63rem; }
+  .mobile-toc { display: none; padding: 12px 16px; margin-bottom: 24px; color: var(--muted); font-size: .83rem; }
+  .mobile-toc nav { margin-top: 14px; }
+  @media (max-width: 1050px) { .guide-layout { grid-template-columns: minmax(0, 1fr) 210px; gap: 34px; } }
+  @media (max-width: 800px) { .guide-layout { display: block; } .guide-sidebar { display: none; } .mobile-toc { display: block; } .guide-meta { margin-left: 3px; } }
+</style>

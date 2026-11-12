@@ -1,0 +1,104 @@
+---
+anime: frieren
+releaseTag: "[Yuuki]"
+version: v1
+source: JP BD
+container: MKV
+resolution: 1920×1080
+frameRate: 23.976 fps
+videoProfile: Main 10
+bitDepth: 10
+audioTracks:
+  - language: Japanese
+    codec: Opus
+    channels: "2.0"
+    bitrate: 192 kb/s
+    isDefault: true
+subtitleTracks:
+  - language: English
+    format: ASS
+    title: Sample styled subtitles
+    isDefault: true
+draft: false
+episodeNumber: 1
+isBatch: false
+title: The Journey’s End
+releaseDate: 2026-11-10
+videoCodec: AV1
+bitrate: 1.72 Mb/s
+fileSize: 342 MiB
+crc32: A3C91F2E
+thumbnail: /images/frame-encode.svg
+encoderParams: SvtAv1EncApp -i filtered.y4m -b episode01.ivf --crf 22 --preset 4 --film-grain 6 --keyint 240
+filterScript: >-
+  import vapoursynth as vs
+
+  core = vs.core
+
+
+  # Example only: tune per scene and inspect against the source.
+
+  clip = core.lsmas.LWLibavSource("source.mkv")
+
+  debanded = core.f3kdb.Deband(clip, range=12, y=48, cb=32, cr=32, grainy=0, grainc=0,
+  output_depth=10)
+
+  # Restore grain selectively rather than erasing texture globally.
+
+  debanded.set_output()
+mediainfo: |-
+  General
+  Complete name : [Yuuki] Frieren - 01 [AV1][A3C91F2E].mkv
+  Format        : Matroska
+  File size     : 342 MiB
+  Duration      : 24 min
+
+  Video
+  Format        : AV1
+  Width         : 1 920 pixels
+  Height        : 1 080 pixels
+  Frame rate    : 23.976 FPS
+  Bit depth     : 10 bits
+
+  Audio
+  Format        : Opus
+  Channels      : 2 channels
+  Language      : Japanese
+
+  Text
+  Format        : ASS
+  Language      : English
+screenshots:
+  - src: /images/frame-encode.svg
+    caption: Observatory at night
+    frameNumber: 18420
+    timestamp: 00:12:48
+  - src: /images/detail-encode.svg
+    caption: Lineart detail
+    frameNumber: 18420
+comparisons:
+  - title: Night gradients & fine texture
+    sourceLabel: BD source
+    encodeLabel: AV1 encode
+    sourceImage: /images/frame-source.svg
+    encodeImage: /images/frame-encode.svg
+    frameNumber: 18420
+    note: "SVG demonstration: compare the subtle texture in the sky and the edges of the observatory.
+      These are illustrative frames, not measurements of the anime."
+downloads:
+  - label: Demo mirror
+    url: https://example.com/yuuki/frieren-01
+    provider: Illustrative link
+changelog:
+  - version: v1
+    date: 2026-11-10
+    notes: Initial sample notebook with encoder settings, MediaInfo, and a frame pair.
+---
+
+This demonstration release uses AV1 to show a complete technical notebook. The listed sizes, CRC, and MediaInfo are sample values.
+
+The download button points to an example URL. No anime files are distributed with this project.
+
+### QC notes
+
+Inspect sky gradients at native size, then toggle the source and encode. Use multiple scenes before settling on a grain setting.

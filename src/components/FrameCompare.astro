@@ -1,0 +1,80 @@
+---
+import type { EpisodeEntry } from '../lib/archive';
+import Icon from './Icon.astro';
+type Pair = NonNullable<EpisodeEntry['data']['comparisons']>[number];
+interface Props { comparison: Pair; id: string; }
+const { comparison: c, id } = Astro.props;
+---
+<figure class="frame-compare panel" id={id} data-frame-compare data-mode="split" data-frame="source" tabindex="0" aria-label={`${c.title}. Use 1 and 2 to toggle frames, or drag the split handle.`}>
+  <div class="compare-header"><div><span class="eyebrow">Frame inspection{c.frameNumber !== undefined && <> / {String(c.frameNumber).padStart(6, '0')}</>}</span><h3>{c.title}</h3></div><div class="mode-switch" role="group" aria-label="Comparison mode"><button type="button" data-compare-mode="split" aria-pressed="true"><Icon name="compare" size={14}/> Split</button><button type="button" data-compare-mode="toggle" aria-pressed="false">1 / 2 Toggle</button></div></div>
+  <div class="compare-viewport" data-compare-viewport><div class="compare-stage" style="--split:50%" data-compare-stage><img class="source-image" src={c.sourceImage} alt={`${c.sourceLabel}: ${c.title}`} loading="lazy" data-source-image/><img class="encode-image" src={c.encodeImage} alt={`${c.encodeLabel}: ${c.title}`} loading="lazy" data-encode-image/><span class="image-label source-label mono">{c.sourceLabel}</span><span class="image-label encode-label mono">{c.encodeLabel}</span><button type="button" class="split-handle" data-split-handle aria-label="Drag the frame comparison split" tabindex="-1"><span>‹ ›</span></button></div></div>
+  <div class="compare-controls"><div class="split-control" data-split-control><label for={`${id}-range`} class="sr-only">Source and encode split percentage</label><input type="range" id={`${id}-range`} min="0" max="100" value="50" data-split-range/><output for={`${id}-range`} data-split-output class="mono">50%</output></div><div class="frame-toggle" data-frame-toggle hidden role="group" aria-label="Select frame"><button type="button" class="filter-pill" data-frame-button="source" aria-pressed="true"><kbd>1</kbd> {c.sourceLabel}</button><button type="button" class="filter-pill" data-frame-button="encode" aria-pressed="false"><kbd>2</kbd> {c.encodeLabel}</button></div><button type="button" class="native-button" data-native-button aria-pressed="false">1:1 Native Pixel</button><span class="pixel-status mono" data-pixel-status>FIT TO VIEW</span></div>
+  <figcaption>{c.note && <p>{c.note}</p>}<span class="keyboard-hint mono"><kbd>1</kbd> / <kbd>2</kbd> toggle · <kbd>←</kbd> / <kbd>→</kbd> switch · native view scrolls at original image size</span></figcaption>
+</figure>
+<script>
+  document.querySelectorAll<HTMLElement>('[data-frame-compare]').forEach((root) => {
+    const stage = root.querySelector<HTMLElement>('[data-compare-stage]')!;
+    const source = root.querySelector<HTMLImageElement>('[data-source-image]')!;
+    const range = root.querySelector<HTMLInputElement>('[data-split-range]')!;
+    const handle = root.querySelector<HTMLButtonElement>('[data-split-handle]')!;
+    const native = root.querySelector<HTMLButtonElement>('[data-native-button]')!;
+    const updateSize = () => { stage.style.setProperty('--native-width', `${source.naturalWidth}px`); const label = root.querySelector('[data-pixel-status]'); if (label) label.textContent = root.classList.contains('is-native') ? `${source.naturalWidth} × ${source.naturalHeight} · 1:1` : 'FIT TO VIEW'; };
+    const split = (value: number) => { range.value = String(Math.round(Math.max(0, Math.min(100, value)))); stage.style.setProperty('--split', `${range.value}%`); const output = root.querySelector('output'); if (output) output.textContent = `${range.value}%`; };
+    const setMode = (mode: string) => {
+      root.dataset.mode = mode;
+      root.querySelectorAll<HTMLButtonElement>('[data-compare-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.compareMode === mode)));
+      root.querySelector<HTMLElement>('[data-split-control]')!.hidden = mode !== 'split';
+      root.querySelector<HTMLElement>('[data-frame-toggle]')!.hidden = mode !== 'toggle';
+    };
+    const setFrame = (frame: string) => { setMode('toggle'); root.dataset.frame = frame; root.querySelectorAll<HTMLButtonElement>('[data-frame-button]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.frameButton === frame))); };
+    source.addEventListener('load', updateSize); if (source.complete) updateSize();
+    range.addEventListener('input', () => split(Number(range.value)));
+    root.querySelectorAll<HTMLButtonElement>('[data-compare-mode]').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.compareMode!)));
+    root.querySelectorAll<HTMLButtonElement>('[data-frame-button]').forEach((button) => button.addEventListener('click', () => setFrame(button.dataset.frameButton!)));
+    native.addEventListener('click', () => { root.classList.toggle('is-native'); native.setAttribute('aria-pressed', String(root.classList.contains('is-native'))); updateSize(); });
+    handle.addEventListener('pointerdown', (event) => { event.preventDefault(); handle.setPointerCapture(event.pointerId); });
+    handle.addEventListener('pointermove', (event) => { if (handle.hasPointerCapture(event.pointerId)) { const bounds = stage.getBoundingClientRect(); split((event.clientX - bounds.left) / bounds.width * 100); } });
+    handle.addEventListener('pointerup', (event) => { if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId); });
+    root.addEventListener('keydown', (event) => {
+      if ((event.target as HTMLElement).matches('input') && root.dataset.mode === 'split') return;
+      if (['1', '2', 'ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); setFrame(event.key === '1' || event.key === 'ArrowLeft' ? 'source' : 'encode'); }
+    });
+  });
+</script>
+<style>
+  .frame-compare { overflow: hidden; scroll-margin-top: 100px; }
+  .compare-header { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 17px 20px; }
+  .eyebrow { font-size: .58rem; letter-spacing: .1em; }
+  h3 { margin-top: 6px; font-size: 1rem; }
+  .mode-switch { display: flex; flex-shrink: 0; padding: 3px; background: var(--canvas); border: 1px solid var(--border); border-radius: 5px; }
+  .mode-switch button { display: flex; align-items: center; gap: 5px; font: .68rem var(--font-mono); color: var(--subtle); background: none; border-radius: 3px; padding: 6px 9px; }
+  .mode-switch button[aria-pressed='true'] { color: var(--cyan); background: var(--surface-hover); }
+  .compare-viewport { width: 100%; max-height: 720px; overflow: auto; background: #000; border-block: 1px solid var(--border); }
+  .compare-stage { position: relative; width: 100%; isolation: isolate; }
+  .source-image { display: block; width: 100%; max-width: none; height: auto; }
+  .encode-image { position: absolute; inset: 0; width: 100%; max-width: none; height: 100%; object-fit: fill; clip-path: inset(0 0 0 var(--split)); }
+  .image-label { position: absolute; top: 14px; border: 1px solid #ffffff30; border-radius: 3px; padding: 3px 8px; color: #e8edf6; background: #000000b3; font-size: .62rem; pointer-events: none; }
+  .source-label { left: 14px; } .encode-label { right: 14px; }
+  .split-handle { position: absolute; top: 0; bottom: 0; left: var(--split); width: 22px; transform: translateX(-50%); background: transparent; padding: 0; cursor: ew-resize; touch-action: none; }
+  .split-handle::before { content: ''; position: absolute; inset: 0; width: 1px; background: #00e5ff; margin-inline: auto; box-shadow: 0 0 0 1px #00000060; }
+  .split-handle span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 32px; height: 36px; border-radius: 5px; display: grid; place-items: center; color: #000; background: #00e5ff; font-size: 1.25rem; font-weight: 600; letter-spacing: 2px; }
+  .compare-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+  .split-control { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 120px; }
+  input[type='range'] { padding: 0; height: 18px; border: 0; accent-color: var(--cyan); background: none; }
+  output { font-size: .66rem; color: var(--subtle); width: 30px; }
+  .frame-toggle { display: flex; flex-wrap: wrap; gap: 6px; margin-right: auto; }
+  .frame-toggle button { font-size: .65rem; }
+  .native-button { color: var(--muted); background: transparent; border: 1px solid var(--border-strong); border-radius: 4px; padding: 5px 9px; font: .67rem var(--font-mono); }
+  .native-button[aria-pressed='true'] { color: var(--cyan); border-color: var(--cyan); }
+  .pixel-status { color: var(--subtle); font-size: .57rem; }
+  figcaption { padding: 11px 20px; font-size: .77rem; color: var(--muted); line-height: 1.7; }
+  .keyboard-hint { display: block; margin-top: 3px; color: var(--subtle); font-size: .62rem; }
+  .keyboard-hint kbd { font-size: .6rem; padding: 0 3px; }
+  .is-native .compare-stage { width: var(--native-width); min-width: var(--native-width); }
+  .is-native img { image-rendering: crisp-edges; }
+  [data-mode='toggle'] .encode-image { clip-path: none; }
+  [data-mode='toggle'][data-frame='source'] .encode-image { visibility: hidden; }
+  [data-mode='toggle'] .split-handle { display: none; }
+  [data-mode='toggle'][data-frame='source'] .encode-label, [data-mode='toggle'][data-frame='encode'] .source-label { display: none; }
+  @media (max-width: 600px) { .compare-header { align-items: flex-start; flex-direction: column; padding: 14px; } .compare-controls { padding: 10px 14px; gap: 10px; } .pixel-status { display: none; } figcaption { padding: 10px 14px; } .keyboard-hint { font-size: .57rem; } }
+</style>

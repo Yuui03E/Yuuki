@@ -1,0 +1,23 @@
+---
+import type { GuideEntry } from '../lib/archive';
+import { formatDate, pathFor } from '../lib/archive';
+import Icon from './Icon.astro';
+interface Props { entry: GuideEntry; index?: number; }
+const { entry, index } = Astro.props;
+const d = entry.data;
+---
+<a class="guide-card panel" href={pathFor('guides', entry.id)} data-guide-card data-category={d.category.toLowerCase()} data-search={`${d.title} ${d.description} ${d.tags.join(' ')}`.toLowerCase()}>
+  <div class="guide-top"><span class="badge badge-violet">{d.category}</span>{index !== undefined ? <span class="index mono">/{String(index + 1).padStart(2, '0')}</span> : <Icon name="book" size={18}/>}</div><h3>{d.title}</h3><p>{d.description}</p><div class="guide-bottom"><span class="difficulty mono">{d.difficulty}</span><time class="mono" datetime={d.updatedDate.toISOString()}>{formatDate(d.updatedDate)}</time><Icon name="arrow" size={15}/></div>
+</a>
+<style>
+  .guide-card { display: flex; flex-direction: column; padding: 20px; transition: border-color .15s; }
+  .guide-card:hover { border-color: var(--border-strong); }
+  .guide-top { display: flex; justify-content: space-between; align-items: center; color: var(--subtle); margin-bottom: 16px; }
+  .index { font-size: .75rem; }
+  h3 { font-size: 1.05rem; line-height: 1.4; }
+  .guide-card:hover h3 { color: var(--cyan); }
+  p { margin-top: 9px; color: var(--muted); font-size: .82rem; line-height: 1.7; }
+  .guide-bottom { display: flex; align-items: center; gap: 14px; margin-top: auto; padding-top: 20px; font-size: .64rem; color: var(--subtle); }
+  .difficulty { color: var(--muted); }
+  time { margin-left: auto; }
+</style>

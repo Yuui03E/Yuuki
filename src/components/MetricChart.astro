@@ -1,0 +1,77 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { safeJson } from '../lib/archive';
+interface Props { benchmark: CollectionEntry<'benchmarks'>; }
+const { benchmark } = Astro.props;
+const d = benchmark.data;
+const id = `benchmark-${benchmark.id.replace(/\//g, '-')}`;
+const names: Record<string, string> = { ssimulacra2: 'SSIMULACRA 2', vmaf: 'VMAF', butteraugli: 'Butteraugli', psnr: 'PSNR', fps: 'FPS' };
+---
+<section class="metric-chart panel" id={id} data-metric-chart><header class="chart-header"><div><span class="eyebrow">Rate–distortion / lab notebook</span><h3>{d.title}</h3><p>{d.subtitle}</p></div><span class="badge">{d.sourceClip}</span></header><div class="chart-controls"><label for={`${id}-metric`}>Metric<select id={`${id}-metric`} data-metric-select>{d.metricsAvailable.map((metric) => <option value={metric}>{names[metric]}</option>)}</select></label><label for={`${id}-axis`}>Horizontal axis<select id={`${id}-axis`} data-axis-select><option value="bitrateKbps">Bitrate (kb/s)</option><option value="crf">CRF</option></select></label><div class="chart-legend">{d.series.map((series, index) => <span><i style={`background:${series.color ?? (index ? '#a855f7' : '#00e5ff')}`}></i>{series.label}</span>)}</div></div><div class="chart-plot"><canvas aria-label={`${d.title} interactive rate–distortion chart`} role="img"></canvas></div><p class="metric-note"><span data-metric-help>Higher scores indicate greater fidelity.</span> <span class="subtle">Butteraugli uses the opposite direction: lower is better.</span></p><noscript><p class="metric-note">The measurements are available in the data table below. Enable JavaScript for the interactive chart.</p></noscript>
+  {d.takeaways && <div class="takeaways">{d.takeaways.map((takeaway) => <p><span class="cyan mono">↳</span> {takeaway}</p>)}</div>}
+  <details class="chart-data"><summary>Inspect the underlying data <span class="mono">{d.series.reduce((sum, series) => sum + series.points.length, 0)} SAMPLES</span></summary><div class="data-scroll"><table><thead><tr><th>Encoder</th><th>CRF</th><th>Preset</th><th>kb/s</th>{d.metricsAvailable.map((metric) => <th>{names[metric]}</th>)}</tr></thead><tbody>{d.series.flatMap((series) => series.points.map((point) => <tr><th>{series.label}</th><td>{point.crf}</td><td>{point.preset}</td><td>{point.bitrateKbps}</td>{d.metricsAvailable.map((metric) => <td>{point[metric]}</td>)}</tr>))}</tbody></table></div></details>
+  <script type="application/json" data-benchmark-json set:html={safeJson(d)} />
+</section>
+<script>
+  import Chart from 'chart.js/auto';
+  import type { ChartOptions } from 'chart.js';
+  import type { CollectionEntry } from 'astro:content';
+  type Data = CollectionEntry<'benchmarks'>['data'];
+  type Metric = Data['metricsAvailable'][number];
+  const info: Record<Metric, { name: string; help: string }> = {
+    ssimulacra2: { name: 'SSIMULACRA 2', help: 'Higher SSIMULACRA 2 indicates greater perceptual fidelity.' },
+    vmaf: { name: 'VMAF', help: 'Higher VMAF indicates greater predicted fidelity. Inspect lineart as well.' },
+    butteraugli: { name: 'Butteraugli', help: 'Lower Butteraugli indicates greater perceptual fidelity.' },
+    psnr: { name: 'PSNR (dB)', help: 'Higher PSNR indicates lower pixel-wise error.' },
+    fps: { name: 'Encoding speed (FPS)', help: 'Higher FPS means faster encoding on the measured hardware.' },
+  };
+  document.querySelectorAll<HTMLElement>('[data-metric-chart]').forEach((root) => {
+    const data = JSON.parse(root.querySelector('[data-benchmark-json]')!.textContent!) as Data;
+    const metricSelect = root.querySelector<HTMLSelectElement>('[data-metric-select]')!;
+    const axisSelect = root.querySelector<HTMLSelectElement>('[data-axis-select]')!;
+    const canvas = root.querySelector<HTMLCanvasElement>('canvas')!;
+    const options = (): ChartOptions<'line'> => {
+      const styles = getComputedStyle(document.documentElement); const muted = styles.getPropertyValue('--muted').trim(); const border = styles.getPropertyValue('--border').trim();
+      return { responsive: true, maintainAspectRatio: false, animation: false, parsing: false,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.parsed.y?.toFixed(2)} · ${context.parsed.x} ${axisSelect.value === 'crf' ? 'CRF' : 'kb/s'}` } } },
+        scales: { x: { type: 'linear', title: { display: true, text: axisSelect.value === 'crf' ? 'CRF' : 'Bitrate (kb/s)', color: muted }, ticks: { color: muted, maxTicksLimit: 8 }, grid: { color: border } },
+          y: { title: { display: true, text: info[metricSelect.value as Metric].name, color: muted }, ticks: { color: muted }, grid: { color: border } } },
+      };
+    };
+    const datasets = () => data.series.map((series, index) => ({ label: series.label, borderColor: series.color ?? (index ? '#a855f7' : '#00e5ff'), backgroundColor: series.color ?? (index ? '#a855f7' : '#00e5ff'), borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, tension: .15,
+      data: series.points.flatMap((point) => typeof point[metricSelect.value as Metric] === 'number' ? [{ x: axisSelect.value === 'crf' ? point.crf : point.bitrateKbps, y: point[metricSelect.value as Metric]! }] : []).sort((a, b) => a.x - b.x),
+    }));
+    const chart = new Chart(canvas, { type: 'line', data: { datasets: datasets() }, options: options() });
+    const update = () => { chart.data.datasets = datasets(); chart.options = options(); chart.update(); root.querySelector('[data-metric-help]')!.textContent = info[metricSelect.value as Metric].help; canvas.setAttribute('aria-label', `${data.title}: ${info[metricSelect.value as Metric].name} against ${axisSelect.value === 'crf' ? 'CRF' : 'Bitrate in kb/s'}`); };
+    metricSelect.addEventListener('change', update); axisSelect.addEventListener('change', update);
+    new MutationObserver(update).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    update();
+  });
+</script>
+<style>
+  .metric-chart { overflow: hidden; scroll-margin-top: 100px; }
+  .chart-header { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; padding: 20px 24px 16px; }
+  .eyebrow { font-size: .6rem; }
+  h3 { margin-top: 8px; font-size: 1.2rem; }
+  .chart-header p { color: var(--muted); font-size: .8rem; margin-top: 8px; max-width: 700px; }
+  .chart-header > .badge { margin-top: 2px; font-size: .61rem; }
+  .chart-controls { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 14px; border-block: 1px solid var(--border); padding: 12px 24px; }
+  label { color: var(--subtle); font: .62rem var(--font-mono); display: flex; flex-direction: column; gap: 5px; }
+  select { font: .72rem var(--font-mono); padding: 6px 28px 6px 9px; width: auto; }
+  .chart-legend { display: flex; flex-wrap: wrap; margin-left: auto; gap: 18px; padding-bottom: 7px; }
+  .chart-legend span { display: flex; align-items: center; gap: 7px; font: .67rem var(--font-mono); color: var(--muted); }
+  .chart-legend i { width: 16px; height: 2px; }
+  .chart-plot { height: 350px; padding: 20px 24px 6px; }
+  .metric-note { margin: 8px 24px 17px; color: var(--muted); font-size: .74rem; }
+  .takeaways { border-top: 1px solid var(--border); padding: 13px 24px; font-size: .77rem; color: var(--muted); }
+  .takeaways p + p { margin-top: 5px; }
+  .chart-data { border-top: 1px solid var(--border); }
+  summary { padding: 11px 24px; font-size: .75rem; color: var(--muted); }
+  summary span { float: right; font-size: .6rem; color: var(--subtle); }
+  .data-scroll { overflow-x: auto; }
+  table { min-width: 800px; font: .67rem var(--font-mono); }
+  th, td { padding: 9px 13px; border-top: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); } td { color: var(--subtle); }
+  @media (max-width: 760px) { .chart-header { flex-direction: column; padding: 17px; gap: 10px; } .chart-controls { padding: 12px 17px; } .chart-legend { margin-left: 0; flex-basis: 100%; } .chart-plot { padding-inline: 8px; height: 300px; } .metric-note { margin-inline: 17px; } .takeaways { padding: 13px 17px; } }
+</style>

@@ -1,0 +1,8 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ReleasesTable from '../../components/ReleasesTable.astro';
+import { getArchive } from '../../lib/archive';
+const { anime, episodes } = await getArchive();
+---
+<BaseLayout title="Release index"><div class="page-heading"><span class="eyebrow">Release index / {episodes.length} published entries</span><h1>The release desk<span class="cyan">.</span></h1><p>Episodes and batches, with the source, specifications, and notes attached.</p></div><ReleasesTable anime={anime} episodes={episodes}/><p class="release-note mono">SAMPLE CONTENT · Download links are illustrative. Inspect each release for its technical notebook.</p></BaseLayout>
+<style>.release-note { margin-top: 17px; font-size: .62rem; color: var(--subtle); }</style>

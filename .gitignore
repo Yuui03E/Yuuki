@@ -1,0 +1,33 @@
+# Build output, local state, secrets, and original sources
+node_modules/
+dist/
+.astro/
+.env*
+raw-sources/
+.npm-cache/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+Thumbs.db
+
+# Raw video, audio, and archives must never be committed
+*.mkv
+*.mp4
+*.m2ts
+*.ts
+*.webm
+*.flac
+*.wav
+*.opus
+*.aac
+*.7z
+*.zip
+*.rar
+*.iso
+
+# Keep TypeScript source; .ts above also matches MPEG transport streams
+!src/**/*.ts
+!tests/**/*.ts
+!scripts/**/*.ts
+!*.config.ts

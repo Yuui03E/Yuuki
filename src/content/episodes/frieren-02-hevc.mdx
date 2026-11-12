@@ -1,0 +1,83 @@
+---
+anime: frieren
+releaseTag: "[Yuuki]"
+version: v1
+source: JP BD
+container: MKV
+resolution: 1920×1080
+frameRate: 23.976 fps
+videoProfile: Main 10
+bitDepth: 10
+audioTracks:
+  - language: Japanese
+    codec: Opus
+    channels: "2.0"
+    bitrate: 192 kb/s
+    isDefault: true
+subtitleTracks:
+  - language: English
+    format: ASS
+    title: Sample styled subtitles
+    isDefault: true
+draft: false
+episodeNumber: 2
+isBatch: false
+title: It Didn’t Have to Be Magic…
+releaseDate: 2026-11-11
+videoCodec: HEVC
+bitrate: 2.25 Mb/s
+fileSize: 428 MiB
+crc32: B4D82E19
+encoderParams: x265 --input filtered.y4m --y4m --crf 17 --preset slow --profile main10 --output episode02.hevc
+filterScript: >-
+  import vapoursynth as vs
+
+  core = vs.core
+
+
+  # Example only: tune per scene and inspect against the source.
+
+  clip = core.lsmas.LWLibavSource("source.mkv")
+
+  debanded = core.f3kdb.Deband(clip, range=12, y=48, cb=32, cr=32, grainy=0, grainc=0,
+  output_depth=10)
+
+  # Restore grain selectively rather than erasing texture globally.
+
+  debanded.set_output()
+mediainfo: |-
+  General
+  Format : Matroska
+  File size : 428 MiB
+
+  Video
+  Format : HEVC
+  Profile : Main 10
+  Dimensions : 1920 x 1080
+  Frame rate : 23.976 FPS
+
+  Audio
+  Format : Opus
+  Language : Japanese
+screenshots:
+  - src: /images/detail-source.svg
+    caption: Tower detail study
+    timestamp: 00:08:21
+comparisons:
+  - title: Architectural edges & lineart
+    sourceLabel: BD source
+    encodeLabel: HEVC encode
+    sourceImage: /images/detail-source.svg
+    encodeImage: /images/detail-encode.svg
+    frameNumber: 12012
+    note: "Illustrative close-up: watch the window edges and fine grain while toggling. Use native pixel
+      view to avoid browser scaling."
+downloads:
+  - label: Demo mirror
+    url: https://example.com/yuuki/frieren-02
+    provider: Illustrative link
+---
+
+A HEVC sample for comparison with the AV1 release notebook. Source retention and playback compatibility are part of the decision, alongside file size.
+
+All specifications and links are demonstration data.
