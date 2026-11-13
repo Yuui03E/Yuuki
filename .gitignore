@@ -4,12 +4,26 @@ dist/
 .astro/
 .env*
 raw-sources/
+media-library/
+local-backups/
+.wrangler/
+publishing.local.json
+.code-only-check-*/
 .npm-cache/
 test-results/
 playwright-report/
 *.log
 .DS_Store
 Thumbs.db
+
+# Keep bulk images out of GitHub; only small root-level SVG samples are tracked.
+public/images/*
+!public/images/*.svg
+
+# All real editorial data is local. Only empty collection placeholders are tracked.
+src/content/**
+!src/content/**/
+!src/content/**/.gitkeep
 
 # Raw video, audio, and archives must never be committed
 *.mkv

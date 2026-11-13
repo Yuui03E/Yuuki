@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('all public pages load with no browser errors or broken local images', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', (error) => errors.push(error.message));
-  for (const route of ['/', '/anime/', '/anime/frieren/', '/anime/witch-hat-atelier/', '/releases/', '/releases/frieren-01-av1/', '/releases/frieren-02-hevc/', '/releases/frieren-01-02-batch/', '/guides/', '/guides/av1-hevc-tuning/', '/guides/vapoursynth-source-first/', '/comparisons/', '/about/']) {
+  for (const route of ['/', '/anime/', '/anime/frieren/', '/anime/witch-hat-atelier/', '/anime/encoding-demo/', '/releases/', '/releases/frieren-01-av1/', '/releases/frieren-02-hevc/', '/releases/frieren-01-02-batch/', '/releases/encoding-demo-01/', '/guides/', '/guides/av1-hevc-tuning/', '/guides/vapoursynth-source-first/', '/comparisons/', '/about/']) {
     const response = await page.goto(route); expect(response?.status(), route).toBe(200);
     await expect(page.locator('h1')).toBeVisible();
     expect(await page.locator('img[src^="/images/"]').evaluateAll(async (images) => {
@@ -57,7 +57,7 @@ test('theme persists and mobile pages stay within their viewport', async ({ page
   await page.goto('/'); await page.getByRole('button', { name: 'Switch color theme' }).click(); await page.reload(); await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'Switch color theme' }).click();
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const route of ['/', '/anime/', '/anime/frieren/', '/releases/', '/releases/frieren-01-av1/', '/guides/', '/guides/vapoursynth-source-first/', '/comparisons/', '/about/', 'http://127.0.0.1:4321/studio/']) {
+  for (const route of ['/', '/anime/', '/anime/frieren/', '/anime/encoding-demo/', '/releases/', '/releases/frieren-01-av1/', '/releases/encoding-demo-01/', '/guides/', '/guides/vapoursynth-source-first/', '/comparisons/', '/about/', 'http://127.0.0.1:4321/studio/']) {
     await page.goto(route); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true);
   }
   await page.goto('/'); await page.getByLabel('Open navigation').click(); await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible();

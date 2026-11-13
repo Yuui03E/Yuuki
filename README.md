@@ -1,57 +1,106 @@
 # Yuuki
 
-A compact, OLED-black anime and manga archive, static release index, comparison bench, and technical guide library. Built with Astro 7, strict TypeScript, MDX, vanilla CSS, and optional page-specific interactions.
+An Astro 7 static encoding journal with strict TypeScript, MDX, vanilla CSS, an OLED-black theme, screenshot comparisons and a local publishing studio.
+
+**GitHub holds the reusable application and safe examples. Real posts, metadata, image addresses and drafts stay in local files.** Build the complete site on your PC and upload the finished website directly to Cloudflare Pages. Public images are hosted separately on imgbox.
 
 ## Run locally
 
-Use Node.js 22.23.4 or newer, as required by the installed Astro release.
+Use Node.js 22.23.4 or newer. The checked runtime is selected by `.node-version`.
 
-```sh
+~~~sh
 npm ci
+~~~
+
+In a **new code-only checkout with no real content**, import the safe examples once:
+
+~~~sh
+npm run seed:demo
+~~~
+
+The importer refuses to run if any local records already exist. It copies safe examples from `examples/content/` and never replaces your records or images. Existing authoring checkouts should use their local records instead.
+
+~~~sh
 npm run dev
-```
+~~~
 
-Open http://127.0.0.1:4321/ for the website and http://127.0.0.1:4321/studio/ for the local publishing studio. Keep the development server on loopback.
+Open http://127.0.0.1:4321/ for the site and http://127.0.0.1:4321/studio/ for the studio. The development server and publishing endpoints stay on loopback.
 
-## Author content
+## Local content
 
-The studio has three tabs: Anime / Manga, Episode / Batch, and Tutorial guide. AniList search accepts a title, numeric ID, or AniList URL. Search runs directly in the browser and can be replaced by manual entry when AniList is unavailable. Review imported archive status and source metadata before saving.
-
-The episode form supports optional technical specifications, dynamic download/audio/subtitle/screenshot/comparison/changelog rows, and multiline technical blocks. The guide editor previews sanitized Markdown and safe HTML; saved MDX supports custom components and imports. Preview does not execute custom MDX. Treat saved MDX as trusted local source code.
-
-**Save to Local Content** validates the entry and creates a new `.mdx` file in its approved content folder. Content IDs are derived from titles, or from the series, episode, and version. Existing `.md` or `.mdx` files are preserved. Choose a new ID for another version. Edit an existing file directly when you want to revise it.
-
-Drafts, releases whose series is a draft, and activity logs referring to draft series are omitted from public routes and both search indexes. Draft entries remain selectable in the local studio.
-
-## Content folders
-
-| Collection | Location | Format |
+| Collection | Local folder | Format |
 | --- | --- | --- |
 | Anime and manga | `src/content/anime/` | MD / MDX |
-| Episode and batch releases | `src/content/episodes/` | MD / MDX |
-| Technical guides | `src/content/guides/` | MD / MDX |
-| Benchmark datasets | `src/content/benchmarks/` | JSON |
+| Releases | `src/content/episodes/` | MD / MDX |
+| Guides | `src/content/guides/` | MD / MDX |
+| Benchmarks | `src/content/benchmarks/` | JSON |
 | Activity logs | `src/content/progress/` | MD / MDX |
 
-Schemas are shared between Astro collections and the studio validator. Every episode technical input is optional. Local illustrations and exported comparison frames belong in `public/images/`. Original video, audio, archives, secrets, dependencies, and generated output are excluded by `.gitignore`; TypeScript source is explicitly retained.
+These folders are ignored by Git; only their empty `.gitkeep` placeholders are tracked. The application schema `src/content.config.ts` remains tracked.
 
-The sample archive includes two series, three releases, two guides, one benchmark, two activity logs, and seven original SVG illustrations. Download links and technical measurements are illustrative. `scripts/seed-demo.mjs` recreates these samples only in an empty content destination; it refuses to overwrite existing files.
+The studio validates fields and creates a new local MDX file. It never silently replaces an existing file. Edit existing records locally when revising them. Every episode technical input is optional; absent details do not render empty rows. Drafts and children of draft series stay out of public pages and search.
 
-## Build and verify
+GitHub no longer backs up your real records. Keep a separate backup of all five folders, your original media, and your image-address mapping. The migration snapshot in ignored `local-backups/` is on the same PC and is not protection against drive failure. Previous Git commits can still contain records that were pushed before this separation; this update does not erase Git history.
 
-```sh
+## Images
+
+Use [imgbox](https://imgbox.com/) for public screenshots. Its help page supports JPG, GIF and PNG up to **10 MB per file** and permits original full-size embedding. Use the supplied full-size image URL, rather than a viewer-page link or thumbnail. Mark explicit uploads as Adult Content and follow the service's terms.
+
+For comparison frames, keep source and encode dimensions equal and use lossless PNG originals. ImgLink was rejected after the user observed automatic compression. Keep local originals and verified image addresses; service retention is not a backup guarantee.
+
+Originals belong outside the repository or in ignored `media-library/`. Raster images and subfolders under `public/images/` are ignored; root-level small SVG illustrations are the tracked examples. An ignored local image is absent from a Git-triggered build.
+
+## Build and check
+
+~~~sh
 npx astro check && npm run build
 npm test
 npm run test:e2e
 npm run test:production
-```
+npm run test:code-only
+~~~
 
-The build generates `dist/` and a Pagefind index. `/studio/` becomes a simple redirect to `/`; the authoring UI, authoring JavaScript, and write middleware are absent from production. Deploy only `dist/` to a static host. No server adapter is required.
+`npm run check:repo` rejects tracked editorial files, media, secrets and generated output. `npm run build` requires published local records and intentionally stops under Cloudflare's Git-build environment or GitHub Actions. This prevents a code-only checkout from replacing the live archive with missing content.
 
-For Cloudflare Pages, connect the GitHub repository and select `main` as the production branch, `npm run build` as the build command, and `dist` as the output directory. Keep the root directory at the repository root. The `.node-version` file selects the verified Node.js runtime. Each push to the connected production branch triggers a new deployment.
+`npm run verify` runs the full suite. The code-only verification imports safe examples into an isolated temporary checkout and builds them without using real local records. It reuses the installed dependencies.
 
-Browser checks use an installed Microsoft Edge and start local development and preview servers when needed. They cover public routes, search, filters, keyboard and pointer comparison controls, native dimensions, lightboxes, copy controls, charts, themes, responsive layouts, AniList autofill with a deterministic API fixture, and actual local draft saves. The production audit briefly creates exclusive QA entries, verifies draft exclusion and optional field rendering, removes only its own files, and rebuilds the clean archive.
+Astro produces `dist/` and Pagefind search data. The studio UI, authoring JavaScript and write endpoints are absent from production. Deploy only reviewed `dist/`. Published text and metadata are readable in public HTML and search data; keeping the editable source local does not make the published values private.
 
-`npm run verify` runs the complete check suite. If running in a restricted environment that blocks Astro's user-level telemetry configuration, set `ASTRO_TELEMETRY_DISABLED=1` for the command session. This does not alter site behavior.
+## Publish directly to Cloudflare
 
-See `BUILD_REPORT.md` for the completed work, verification results, command ledger, and source file inventory.
+Keep the existing Pages project. In its dashboard, open **Build → Branch control**, disable automatic production deployments, and set automatic preview branch deployments to **None**. Existing Git-connected projects support Wrangler uploads; dashboard drag-and-drop is not available for that project type.
+
+The installed Wrangler tool handles uploads. Authenticate once:
+
+~~~sh
+npx wrangler login
+npx wrangler pages project list
+~~~
+
+Copy `publishing.example.json` to ignored `publishing.local.json`. Set the actual existing project name and production branch from Cloudflare. No credentials belong in that file or GitHub.
+
+Check the finished local build without uploading:
+
+~~~sh
+npm run publish:site -- --check
+~~~
+
+Upload a reviewed preview using a branch different from production:
+
+~~~sh
+npm run publish:site -- --preview review
+~~~
+
+Publish production explicitly:
+
+~~~sh
+npm run publish:site
+~~~
+
+The publisher checks the repository boundary, runs Astro checks, builds, inspects output for private source/config files and Pages limits, and then uploads only `dist/`. Failed checks stop before upload. Wrangler logs stay in ignored `.wrangler/`.
+
+Each publication replaces the current asset set, so publish the complete fresh build. Source code pushes and website publication are separate actions. Use the documented `[CF-Pages-Skip]` commit-message prefix when a code update must skip a connected Pages Git deployment; the local-build guard also prevents code-only cloud builds from replacing production.
+
+After upload succeeds, the site works while the PC is off. This workflow does not require R2 billing, a paid domain, hosted CMS, database, SSR or a server adapter.
+
+See [PUBLISHING_ROADMAP.md](PUBLISHING_ROADMAP.md) for implementation status and remaining host setup, and [IMAGE_STORAGE.md](IMAGE_STORAGE.md) for image details. Adult classification, separate adult browsing/search and deliberate image loading are planned before explicit publication; they are not implemented by the code/content migration.
