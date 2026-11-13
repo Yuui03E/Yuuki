@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
     "check": "astro check",
+    "clean": "node scripts/clean.mjs",
     "build": "node scripts/build-local.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
     "check:repo": "node scripts/check-repository.mjs",

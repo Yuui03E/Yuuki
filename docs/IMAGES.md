@@ -30,4 +30,4 @@ No account or media upload was created by this project change. A future local up
 
 - [Imgbox help: supported types, size, retention and full-size embedding](https://imgbox.com/help)
 - [Imgbox terms](https://imgbox.com/tos)
-- [Publishing workflow and remaining setup](PUBLISHING_ROADMAP.md)
+- [Publishing workflow and remaining setup](PUBLISHING.md)
