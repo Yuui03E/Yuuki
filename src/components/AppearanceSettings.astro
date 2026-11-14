@@ -1,0 +1,135 @@
+---
+import Icon from './Icon.astro';
+const fonts = [
+  { value: 'editorial', label: 'Editorial', description: 'Clean text, literary headings' },
+  { value: 'modern', label: 'Modern', description: 'A clear sans serif throughout' },
+  { value: 'bookish', label: 'Bookish', description: 'A softer reading-room feel' },
+  { value: 'mono', label: 'Mono', description: 'The workbench, in type' },
+];
+const colors = [
+  { value: 'default', label: 'Original', swatch: 'var(--original-text)' },
+  { value: '#eacba2', label: 'Warm', swatch: '#eacba2' },
+  { value: '#bce2d3', label: 'Mint', swatch: '#bce2d3' },
+  { value: '#bdcbf4', label: 'Sky', swatch: '#bdcbf4' },
+];
+const backgrounds = [
+  { value: 'plain', label: 'Plain' }, { value: 'contour', label: 'Contour' },
+  { value: 'orbit', label: 'Orbit' }, { value: 'grid', label: 'Grid' },
+];
+---
+<details id="appearance" class="appearance" data-appearance>
+  <summary>
+    <span class="appearance-title"><span class="appearance-icon"><Icon name="sliders" size={17}/></span>Appearance</span>
+    <span class="summary-note">A little more you.</span>
+    <span class="appearance-expand" aria-hidden="true"><Icon name="plus" size={15}/></span>
+  </summary>
+  <div class="appearance-content">
+    <div class="appearance-intro"><h2>Make this space <em>yours.</em></h2><p>Adjust the page as you like. Your choices are remembered in this browser.</p></div>
+    <noscript><p class="appearance-unavailable">Turn on JavaScript to change the appearance and show your local time.</p></noscript>
+    <form data-appearance-form>
+      <fieldset class="appearance-fields" data-appearance-fields disabled>
+        <legend class="sr-only">Personalize Yuuki</legend>
+        <div class="appearance-grid">
+          <section class="appearance-group" aria-labelledby="appearance-type">
+            <h3 id="appearance-type"><span class="mono">01</span> Type & color</h3>
+            <fieldset class="option-group"><legend>Font style</legend><div class="font-options">{fonts.map((font) => <label class="font-option" title={font.description}><input class="sr-only" type="radio" name="font" value={font.value} checked={font.value === 'editorial'}/><span class:list={['font-sample', `font-${font.value}`]} aria-hidden="true">Aa</span><span>{font.label}</span></label>)}</div></fieldset>
+            <fieldset class="option-group"><legend>Text color</legend><div class="color-options">{colors.map((color) => <label class="color-option"><input class="sr-only" type="radio" name="textColor" value={color.value} checked={color.value === 'default'}/><span class="color-swatch" style={`--swatch: ${color.swatch}`} aria-hidden="true"></span><span>{color.label}</span></label>)}</div></fieldset>
+            <div class="custom-color"><label for="appearance-color">Custom color</label><div><input id="appearance-color" type="color" name="customColor" value="#f0f1e9" aria-describedby="appearance-color-note"/><output class="mono" data-effective-color>#f0f1e9</output></div></div>
+            <p class="setting-note" id="appearance-color-note" data-color-note hidden>This shade is adjusted for readable text in the current theme.</p>
+          </section>
+          <section class="appearance-group" aria-labelledby="appearance-atmosphere">
+            <h3 id="appearance-atmosphere"><span class="mono">02</span> Atmosphere</h3>
+            <fieldset class="option-group"><legend>Background design</legend><div class="background-options">{backgrounds.map((background) => <label class="background-option"><input class="sr-only" type="radio" name="background" value={background.value} checked={background.value === 'contour'}/><span class:list={['background-sample', `sample-${background.value}`]} aria-hidden="true"></span><span>{background.label}</span></label>)}</div></fieldset>
+            <label class="select-control" for="appearance-background-shuffle">Background shuffle<select id="appearance-background-shuffle" name="backgroundShuffle"><option value="on">On · every 5 minutes</option><option value="off">Off · keep this design</option></select></label>
+            <p class="setting-note">Shuffle picks a different design. Plain turns shuffle off.</p>
+            <div class="range-control"><label for="appearance-background">Design strength <output class="mono" for="appearance-background" data-background-output>28%</output></label><input id="appearance-background" name="backgroundStrength" type="range" min="0" max="100" value="28"/><div class="range-ends"><span>Quiet</span><span>Defined</span></div></div>
+            <div class="range-control"><label for="appearance-grain">Background grain <output class="mono" for="appearance-grain" data-grain-output>Off</output></label><input id="appearance-grain" name="grain" type="range" min="0" max="100" value="0"/><div class="range-ends"><span>Off</span><span>Textured</span></div></div>
+          </section>
+          <section class="appearance-group comfort-group" aria-labelledby="appearance-comfort">
+            <h3 id="appearance-comfort"><span class="mono">03</span> At your pace</h3>
+            <fieldset class="option-group"><legend>Color theme</legend><div class="theme-options"><label><input class="sr-only" type="radio" name="theme" value="dark" checked/><Icon name="moon" size={14}/><span>Dark</span></label><label><input class="sr-only" type="radio" name="theme" value="light"/><Icon name="sun" size={14}/><span>Light</span></label></div></fieldset>
+            <label class="select-control" for="appearance-clock">Clock<select id="appearance-clock" name="clock"><option value="24h">24-hour</option><option value="12h">12-hour</option><option value="off">Hidden</option></select></label>
+            <label class="select-control" for="appearance-slideshow">Release slideshow<select id="appearance-slideshow" name="slideshow"><option value="auto">Play automatically</option><option value="manual">Browse manually</option></select></label>
+            <p class="setting-note">Automatic slides pause while you browse them. Reduced motion uses manual browsing.</p>
+          </section>
+        </div>
+        <div class="appearance-actions"><p data-appearance-status role="status">Choices save automatically.</p><button type="reset">Reset to defaults <Icon name="reset" size={14}/></button></div>
+      </fieldset>
+    </form>
+  </div>
+</details>
+<script>
+  import '../scripts/appearance';
+</script>
+<style>
+  .appearance { border-top: 1px solid var(--border); }
+  summary { display: flex; align-items: center; gap: 18px; min-height: 70px; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  .appearance-title { display: flex; align-items: center; gap: 12px; color: var(--text); font-size: .86rem; }
+  .appearance-icon { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--border-strong); border-radius: 50%; color: var(--accent); }
+  .summary-note { color: var(--muted); font-size: .75rem; }
+  .appearance-expand { display: grid; place-items: center; margin-left: auto; color: var(--muted); transition: transform .15s; }
+  .appearance[open] .appearance-expand { transform: rotate(45deg); }
+  summary:hover .appearance-title { color: var(--accent); }
+  .appearance-content { padding: 10px 0 24px; }
+  .appearance-intro { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 8px 0 24px; }
+  .appearance-intro h2 { font: 400 1.85rem/1.3 var(--font-display); color: var(--text); }
+  .appearance-intro em { color: var(--accent); }
+  .appearance-intro p { font-size: .77rem; color: var(--muted); max-width: 350px; }
+  .appearance-fields, .option-group { border: 0; padding: 0; margin: 0; min-inline-size: 0; }
+  .appearance-grid { display: grid; grid-template-columns: 1fr 1fr .85fr; gap: 30px; padding: 24px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+  .appearance-group { min-width: 0; }
+  .appearance-group + .appearance-group { border-left: 1px solid var(--border); padding-left: 30px; }
+  h3 { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: .9rem; font-weight: 500; margin-bottom: 20px; letter-spacing: -.02em; }
+  h3 .mono { color: var(--accent); font-size: .6rem; }
+  .option-group + .option-group, .range-control, .custom-color, .select-control { margin-top: 19px; }
+  legend, .custom-color > label, .range-control > label, .select-control { color: var(--muted); font-size: .75rem; }
+  .option-group > legend { margin-bottom: 9px; }
+  .font-options, .color-options, .background-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .font-option, .color-option, .background-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-height: 65px; padding: 8px 3px; border: 1px solid var(--border); border-radius: 4px; font-size: .65rem; color: var(--muted); cursor: pointer; }
+  .font-sample { font-size: 1.35rem; line-height: 1.2; color: var(--text); }
+  .font-editorial, .font-bookish { font-family: var(--font-book); }
+  .font-modern { font-family: var(--font-interface); }
+  .font-mono { font-family: var(--font-mono); font-size: 1.2rem; }
+  .font-bookish { font-style: italic; }
+  .color-option { min-height: 61px; }
+  .color-swatch { width: 17px; height: 17px; border-radius: 50%; background: var(--swatch); border: 1px solid rgb(128 128 128 / 35%); }
+  .font-option:has(:checked), .color-option:has(:checked), .background-option:has(:checked), .theme-options label:has(:checked) { border-color: var(--accent); background: var(--accent-wash); color: var(--text); }
+  label:has(.sr-only:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .custom-color { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .custom-color > div { display: flex; align-items: center; gap: 9px; }
+  input[type='color'] { width: 35px; height: 35px; padding: 3px; border-color: var(--border-strong); cursor: pointer; }
+  input[type='color']::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type='color']::-webkit-color-swatch { border: 0; border-radius: 2px; }
+  [data-effective-color] { color: var(--muted); font-size: .65rem; }
+  .setting-note { color: var(--muted); font-size: .68rem; line-height: 1.65; margin-top: 10px; }
+  .background-option { min-height: 76px; padding: 5px 3px 8px; }
+  .background-sample { position: relative; width: calc(100% - 4px); height: 35px; overflow: hidden; background: var(--canvas); border-radius: 2px; }
+  .background-sample::after { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: .5; }
+  .sample-plain::after { display: none; }
+  .sample-contour::after { mask: url('/images/background-contour.svg') 65% 10% / 210% no-repeat; }
+  .sample-orbit::after { mask: url('/images/background-orbit.svg') 90% 25% / 185% no-repeat; }
+  .sample-grid::after { background: linear-gradient(var(--accent) 1px, transparent 1px), linear-gradient(90deg, var(--accent) 1px, transparent 1px); background-size: 10px 10px; opacity: .27; }
+  .range-control > label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .range-control output { color: var(--text); font-size: .65rem; }
+  input[type='range'] { display: block; appearance: none; width: 100%; height: 28px; margin: 4px 0 0; padding: 0; border: 0; background: transparent; cursor: pointer; accent-color: var(--accent); }
+  input[type='range']::-webkit-slider-runnable-track { height: 3px; background: var(--border-strong); border-radius: 3px; }
+  input[type='range']::-webkit-slider-thumb { appearance: none; width: 13px; height: 13px; margin-top: -5px; border-radius: 50%; border: 0; background: var(--accent); }
+  input[type='range']::-moz-range-track { height: 3px; background: var(--border-strong); border-radius: 3px; }
+  input[type='range']::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; border: 0; background: var(--accent); }
+  input[type='range']:disabled { opacity: .35; cursor: default; }
+  .range-ends { display: flex; justify-content: space-between; color: var(--subtle); font-size: .61rem; }
+  .theme-options { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .theme-options label { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-size: .72rem; cursor: pointer; }
+  .select-control { display: grid; gap: 8px; }
+  select { min-height: 44px; padding: 8px 10px; font-size: .75rem; }
+  .appearance-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 2px 0; }
+  .appearance-actions p { color: var(--muted); font-size: .7rem; }
+  .appearance-actions button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--muted); background: transparent; font-size: .7rem; white-space: nowrap; }
+  .appearance-actions button:hover { color: var(--accent); }
+  .appearance-unavailable { margin-bottom: 20px; color: var(--muted); font-size: .78rem; }
+  @media (max-width: 1100px) { .appearance-grid { gap: 20px; padding: 20px; } .appearance-group + .appearance-group { padding-left: 20px; } .font-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } .font-option { flex-direction: row; gap: 10px; min-height: 44px; } }
+  @media (max-width: 850px) { .appearance-intro { align-items: flex-start; } .appearance-grid { grid-template-columns: 1fr 1fr; } .comfort-group { grid-column: 1/-1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; border-left: 0 !important; border-top: 1px solid var(--border); padding: 20px 0 0 !important; } .comfort-group h3, .comfort-group .setting-note { grid-column: 1/-1; margin: 0; } .comfort-group .select-control { margin: 0; align-content: start; } .comfort-group .option-group > legend { margin-bottom: 8px; } }
+  @media (max-width: 600px) { summary { min-height: 64px; gap: 12px; } .summary-note { font-size: .66rem; } .appearance-intro { display: block; padding-top: 2px; } .appearance-intro h2 { font-size: 1.7rem; } .appearance-intro p { margin-top: 9px; } .appearance-grid { grid-template-columns: 1fr; gap: 23px; padding: 18px; } .appearance-group + .appearance-group { padding: 23px 0 0; border-left: 0; border-top: 1px solid var(--border); } .font-options { grid-template-columns: repeat(4, minmax(0, 1fr)); } .font-option { flex-direction: column; gap: 5px; min-height: 61px; } .comfort-group { grid-column: auto; grid-template-columns: 1fr 1fr; padding-top: 23px !important; } .comfort-group .option-group { grid-column: 1/-1; } .appearance-actions { align-items: flex-start; gap: 12px; } .appearance-actions p { margin-top: 12px; font-size: .65rem; } }
+  @media (max-width: 360px) { .summary-note { display: none; } .appearance-grid { padding: 15px; } .font-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } .font-option { flex-direction: row; min-height: 44px; gap: 9px; } .color-option, .background-option { font-size: .59rem; } .comfort-group { grid-template-columns: 1fr; } .comfort-group h3, .comfort-group .setting-note, .comfort-group .option-group { grid-column: auto; } }
+</style>

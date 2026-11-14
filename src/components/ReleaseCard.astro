@@ -1,0 +1,31 @@
+---
+import type { AnimeEntry, EpisodeEntry } from '../lib/archive';
+import { episodeCaption, formatDate, pathFor } from '../lib/archive';
+import Icon from './Icon.astro';
+interface Props { entry: EpisodeEntry; series?: AnimeEntry; }
+const { entry, series } = Astro.props;
+const d = entry.data;
+const image = d.thumbnail ?? series?.data.coverImage;
+const facts = [d.source ?? series?.data.sourceType, d.resolution, d.videoCodec, d.fileSize].filter(Boolean);
+---
+<a class="release-card" href={pathFor('releases', entry.id)}>
+  {image && <img src={image} alt="" width="72" height="96" loading="lazy"/>}
+  <div class="release-copy"><div class="release-top"><span class="release-kind mono">{episodeCaption(entry)}</span><time datetime={d.releaseDate.toISOString()}>{formatDate(d.releaseDate, true)}</time></div><h3>{series?.data.title ?? d.title ?? 'Release'}</h3><p>{facts.join(' · ')}</p></div>
+  <span class="release-arrow"><Icon name="arrow" size={18}/></span>
+</a>
+<style>
+  .release-card { display: flex; align-items: center; gap: 18px; padding: 18px 0; border-top: 1px solid var(--border); }
+  .release-card:last-child { border-bottom: 1px solid var(--border); }
+  img { width: 54px; height: 72px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+  .release-copy { flex: 1; min-width: 0; }
+  .release-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+  .release-kind { color: var(--accent); font-size: .65rem; }
+  time { font-size: .72rem; color: var(--subtle); }
+  h3 { font-size: 1.04rem; line-height: 1.4; }
+  p { color: var(--muted); font-size: .75rem; margin-top: 6px; }
+  p:empty { display: none; }
+  .release-arrow { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 50%; color: var(--muted); flex-shrink: 0; transition: color .15s, border-color .15s; }
+  .release-card:hover h3, .release-card:hover .release-arrow { color: var(--accent); }
+  .release-card:hover .release-arrow { border-color: var(--accent); }
+  @media (max-width: 480px) { .release-card { gap: 12px; } img { width: 43px; height: 60px; } h3 { font-size: .92rem; } .release-arrow { width: 30px; height: 30px; } p { font-size: .7rem; } }
+</style>

@@ -1,27 +1,42 @@
 ---
 import type { AnimeEntry, EpisodeEntry } from '../lib/archive';
-import { audioSummary, episodeLabel, formatDate, pathFor, releaseTitle } from '../lib/archive';
+import { audioSummary, episodeCaption, formatDate, pathFor, releaseTitle } from '../lib/archive';
 import Icon from './Icon.astro';
 interface Props { episodes: EpisodeEntry[]; anime: AnimeEntry[]; id?: string; }
 const { episodes, anime, id = 'releases' } = Astro.props;
 const seriesMap = new Map(anime.map((entry) => [entry.id, entry]));
-const pills = ['All', 'BD', 'WEB', 'AV1', 'HEVC', 'Batch'];
+const sourceFor = (entry: EpisodeEntry) => entry.data.source ?? seriesMap.get(entry.data.anime.id)?.data.sourceType;
+const filtersFor = (entry: EpisodeEntry) => {
+  const source = sourceFor(entry)?.toLowerCase() ?? '';
+  const codec = entry.data.videoCodec ?? '';
+  return [source.includes('bd') ? 'bd' : '', source.includes('web') ? 'web' : '', /av1/i.test(codec) ? 'av1' : '', /hevc|x265|h\.265/i.test(codec) ? 'hevc' : '', /avc|x264|h\.264/i.test(codec) ? 'avc' : '', entry.data.isBatch ? 'batch' : ''].filter(Boolean);
+};
+const availableFilters = new Set(episodes.flatMap(filtersFor));
+const pills = ['All', 'BD', 'WEB', 'AV1', 'HEVC', 'AVC', 'Batch'].filter((pill) => pill === 'All' || availableFilters.has(pill.toLowerCase()));
+const columns = {
+  source: episodes.some((entry) => sourceFor(entry)),
+  resolution: episodes.some((entry) => entry.data.resolution),
+  video: episodes.some((entry) => entry.data.videoCodec || entry.data.bitDepth !== undefined),
+  audio: episodes.some((entry) => audioSummary(entry)),
+  size: episodes.some((entry) => entry.data.fileSize),
+};
 ---
-<div class="release-table panel" data-release-table id={id}>
-  <div class="table-toolbar" data-pagefind-ignore><div class="pill-row" role="group" aria-label="Filter releases">{pills.map((pill) => <button type="button" class="filter-pill" data-filter={pill.toLowerCase()} aria-pressed={pill === 'All'}>{pill}</button>)}</div><div class="table-search"><Icon name="search" size={14}/><label class="sr-only" for={`${id}-search`}>Search releases</label><input id={`${id}-search`} type="search" placeholder="Filter releases…" data-release-search /></div></div>
-  <div class="table-scroll" tabindex="0" role="region" aria-label="Release table. Scroll horizontally for specifications and links.">
-    <table><caption class="sr-only">Yuuki episode and batch releases, newest first</caption><thead><tr><th scope="col">Release</th><th scope="col">Source</th><th scope="col">Res</th><th scope="col">Video</th><th scope="col">Audio</th><th scope="col">Size</th><th scope="col">Date</th><th scope="col" class="links-head">Links</th></tr></thead><tbody>{episodes.map((entry) => {
-      const series = seriesMap.get(entry.data.anime.id);
-      const source = entry.data.source ?? series?.data.sourceType;
-      const filters = [source?.toLowerCase().includes('bd') ? 'bd' : '', source?.toLowerCase().includes('web') ? 'web' : '', entry.data.videoCodec?.toLowerCase().includes('av1') ? 'av1' : '', /hevc|x265|h\.265/i.test(entry.data.videoCodec ?? '') ? 'hevc' : '', entry.data.isBatch ? 'batch' : ''].filter(Boolean).join(' ');
-      return <tr data-release-row data-search={`${releaseTitle(entry, series)} ${entry.data.title ?? ''} ${source ?? ''} ${entry.data.videoCodec ?? ''} ${entry.data.resolution ?? ''} ${entry.data.version}`.toLowerCase()} data-filters={filters}>
-        <td class="release-name"><a href={pathFor('releases', entry.id)}><span class="tag mono">{entry.data.releaseTag}</span><span class="title">{series?.data.title}</span><span class="episode mono">{entry.data.isBatch ? episodeLabel(entry) : `— ${episodeLabel(entry)}`}</span></a><div class="release-secondary">{entry.data.title && <span>{entry.data.title}</span>}{entry.data.isBatch && <span class="batch-marker mono">BATCH</span>}<span class="version mono">{entry.data.version}</span></div></td>
-        <td>{source && <span class="badge">{source}</span>}</td><td class="mono specs">{entry.data.resolution && <span>{entry.data.resolution}</span>}</td><td>{entry.data.videoCodec && <span class:list={['badge', entry.data.videoCodec.includes('AV1') ? 'badge-violet' : 'badge-cyan']}>{entry.data.videoCodec}</span>}{entry.data.bitDepth && <span class="depth mono">{entry.data.bitDepth}-bit</span>}</td><td class="mono specs">{audioSummary(entry) && <span>{audioSummary(entry)}</span>}</td><td class="mono specs">{entry.data.fileSize && <span>{entry.data.fileSize}</span>}</td><td class="mono date"><time datetime={entry.data.releaseDate.toISOString()}>{formatDate(entry.data.releaseDate)}</time></td><td class="release-links">{entry.data.downloads?.slice(0, 3).map((download) => <a href={download.url} class="download-link" title={download.label} aria-label={`${download.label} for ${releaseTitle(entry, series)}`} target={download.isMagnet ? undefined : '_blank'} rel="noreferrer"><Icon name={download.isMagnet ? 'magnet' : 'download'} size={15}/></a>)}<a class="download-link detail-link" href={pathFor('releases', entry.id)} aria-label={`Details for ${releaseTitle(entry, series)}`} title="Release details"><Icon name="chevron" size={14}/></a></td>
+<div class="release-table" data-release-table id={id}>
+  <div class="table-toolbar" data-pagefind-ignore><div class="pill-row" role="group" aria-label="Filter releases">{pills.map((pill) => <button type="button" class="filter-pill" data-filter={pill.toLowerCase()} aria-pressed={pill === 'All'}>{pill}</button>)}</div><div class="table-search"><Icon name="search" size={16}/><label class="sr-only" for={`${id}-search`}>Search releases</label><input id={`${id}-search`} type="search" placeholder="Title, source, or codec…" data-release-search /></div></div>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="Release list with file details and links.">
+    <table><caption class="sr-only">Yuuki episode and batch releases, newest first</caption><thead><tr><th scope="col">Release</th>{columns.source && <th scope="col">Source</th>}{columns.resolution && <th scope="col">Resolution</th>}{columns.video && <th scope="col">Video</th>}{columns.audio && <th scope="col">Audio</th>}{columns.size && <th scope="col">Size</th>}<th scope="col">Released</th><th scope="col" class="links-head">Links</th></tr></thead><tbody>{episodes.map((entry) => {
+      const d = entry.data;
+      const series = seriesMap.get(d.anime.id);
+      const source = sourceFor(entry);
+      const image = d.thumbnail ?? series?.data.coverImage;
+      return <tr data-release-row data-search={`${releaseTitle(entry, series)} ${d.title ?? ''} ${source ?? ''} ${d.videoCodec ?? ''} ${d.resolution ?? ''} ${d.version}`.toLowerCase()} data-filters={filtersFor(entry).join(' ')}>
+        <td class="release-name"><a href={pathFor('releases', entry.id)}>{image && <img class="release-cover" src={image} alt="" width="48" height="64" loading="lazy"/>}<span class="name-copy"><span class="title">{series?.data.title ?? d.title ?? 'Release'}</span><span class="release-secondary"><span class="tag mono">{d.releaseTag}</span><span class="episode">{episodeCaption(entry)}</span><span class="version mono">{d.version}</span></span></span></a>{d.title && <span class="episode-title">{d.title}</span>}</td>
+        {columns.source && <td class="file-fact" data-label="Source">{source && <span class="badge">{source}</span>}</td>}{columns.resolution && <td class="file-fact mono" data-label="Resolution">{d.resolution && <span>{d.resolution}</span>}</td>}{columns.video && <td class="file-fact" data-label="Video">{d.videoCodec && <span class="badge badge-cyan">{d.videoCodec}</span>}{d.bitDepth !== undefined && <span class="depth mono">{d.bitDepth}-bit</span>}</td>}{columns.audio && <td class="file-fact mono" data-label="Audio">{audioSummary(entry) && <span>{audioSummary(entry)}</span>}</td>}{columns.size && <td class="file-fact mono" data-label="Size">{d.fileSize && <span>{d.fileSize}</span>}</td>}<td class="date"><time datetime={d.releaseDate.toISOString()}>{formatDate(d.releaseDate)}</time></td><td class="release-links">{d.downloads?.slice(0, 3).map((download) => <a href={download.url} class="download-link" title={download.label} aria-label={`${download.label} for ${releaseTitle(entry, series)}`} target={download.isMagnet ? undefined : '_blank'} rel="noreferrer"><Icon name={download.isMagnet ? 'magnet' : 'download'} size={16}/></a>)}<a class="download-link detail-link" href={pathFor('releases', entry.id)} aria-label={`Details for ${releaseTitle(entry, series)}`} title="Release details"><Icon name="arrow" size={17}/></a></td>
       </tr>;
     })}</tbody></table>
   </div>
-  <p class="table-empty" data-release-empty hidden>No releases match these filters.</p>
-  <div class="table-bottom mono" data-pagefind-ignore><span data-release-count>{episodes.length} releases</span><span>NEWEST FIRST <span class="cyan">↓</span></span></div>
+  <p class="table-empty" data-release-empty hidden={episodes.length > 0}>{episodes.length ? 'No releases match these filters.' : 'No published releases yet.'}</p>
+  <div class="table-bottom mono" data-pagefind-ignore><span data-release-count aria-live="polite">{episodes.length} releases</span><span>NEWEST FIRST <span class="cyan">↓</span></span></div>
 </div>
 <script>
   document.querySelectorAll<HTMLElement>('[data-release-table]').forEach((table) => {
@@ -52,34 +67,44 @@ const pills = ['All', 'BD', 'WEB', 'AV1', 'HEVC', 'Batch'];
   });
 </script>
 <style>
-  .release-table { overflow: hidden; }
-  .table-toolbar { display: flex; align-items: center; gap: 15px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-  .table-search { display: flex; align-items: center; gap: 8px; margin-left: auto; width: 220px; color: var(--subtle); }
-  .table-search input { border: 0; background: transparent; padding: 4px 0; font-size: .78rem; border-radius: 0; }
-  .table-scroll { overflow-x: auto; }
-  table { min-width: 1050px; }
-  th { color: var(--subtle); font: .67rem var(--font-mono); padding: 10px 14px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: .03em; }
-  td { padding: 15px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
-  tbody tr:last-child td { border-bottom: 0; }
-  tbody tr:hover { background: var(--surface-hover); }
-  .release-name { min-width: 335px; max-width: 460px; }
-  .release-name a { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; line-height: 1.5; }
-  .release-name a:hover .title { color: var(--cyan); }
-  .title { font-size: .84rem; font-weight: 550; max-width: 300px; white-space: normal; }
-  .tag { color: var(--cyan); font-size: .75rem; }
-  .episode { color: var(--muted); font-size: .77rem; }
-  .release-secondary { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: .69rem; color: var(--subtle); }
-  .version { margin-left: 3px; font-size: .65rem; }
-  .batch-marker { color: var(--violet); font-size: .62rem; }
-  .specs { font-size: .7rem; color: var(--muted); }
+  .table-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 15px; padding: 12px 0; border-block: 1px solid var(--border); margin-bottom: 16px; }
+  .table-search { display: flex; align-items: center; gap: 9px; margin-left: auto; width: 265px; color: var(--subtle); }
+  .table-search input { background: transparent; font-size: .8rem; }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; }
+  table { min-width: 1060px; }
+  th { color: var(--subtle); font: .61rem var(--font-mono); padding: 13px 12px; border-bottom: 1px solid var(--border); background: var(--surface); text-transform: uppercase; letter-spacing: .05em; }
+  td { padding: 18px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; } tbody tr:hover { background: var(--surface-hover); }
+  .release-name { min-width: 275px; max-width: 380px; }
+  .release-name a { display: flex; align-items: center; gap: 12px; }
+  .release-cover { width: 40px; height: 56px; flex-shrink: 0; border-radius: 3px; object-fit: cover; }
+  .name-copy { min-width: 0; display: block; }
+  .title { display: block; font-size: .85rem; line-height: 1.5; font-weight: 600; white-space: normal; }
+  .release-name a:hover .title { color: var(--accent); }
+  .release-secondary { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-top: 5px; font-size: .66rem; color: var(--muted); white-space: normal; }
+  .tag { color: var(--accent); font-size: .61rem; } .version { font-size: .6rem; color: var(--subtle); }
+  .episode-title { display: block; white-space: normal; font-size: .67rem; color: var(--subtle); margin: 6px 0 0 52px; }
+  .file-fact { font-size: .67rem; color: var(--muted); } .file-fact .badge { font-size: .61rem; }
   .date { font-size: .69rem; color: var(--muted); }
-  .depth { display: block; font-size: .63rem; color: var(--subtle); margin-top: 3px; }
-  .links-head { text-align: right; }
-  .release-links { text-align: right; }
-  .download-link { display: inline-grid; place-items: center; width: 27px; height: 28px; border-radius: 4px; color: var(--cyan); }
-  .download-link:hover { background: var(--accent-wash); }
-  .detail-link { color: var(--subtle); }
-  .table-bottom { display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding: 9px 16px; color: var(--subtle); font-size: .62rem; letter-spacing: .02em; }
-  .table-empty { padding: 24px; text-align: center; color: var(--muted); }
-  @media (max-width: 760px) { .table-toolbar { align-items: stretch; flex-direction: column; gap: 9px; padding: 12px; } .table-search { width: 100%; margin: 0; } .filter-pill { padding-inline: 10px; } }
+  .depth { display: block; font-size: .6rem; color: var(--subtle); margin-top: 4px; }
+  .links-head, .release-links { text-align: right; }
+  .download-link { display: inline-grid; place-items: center; width: 34px; height: 44px; border-radius: 4px; color: var(--accent); }
+  .download-link:hover { background: var(--accent-wash); } .detail-link { color: var(--muted); }
+  .table-bottom { display: flex; justify-content: space-between; gap: 14px; padding: 13px 0; color: var(--subtle); font-size: .61rem; }
+  .table-empty { padding: 25px; text-align: center; color: var(--muted); border-bottom: 1px solid var(--border); }
+  @media (max-width: 1000px) {
+    .table-scroll { overflow: visible; border: 0; border-radius: 0; }
+    table, tbody { display: block; min-width: 0; width: 100%; }
+    thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+    tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; align-items: center; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 12px; }
+    td { display: flex; align-items: center; gap: 6px; padding: 0; border: 0; white-space: normal; }
+    .release-name { display: block; grid-column: 1/-1; min-width: 0; max-width: none; padding-bottom: 8px; }
+    .release-cover { width: 45px; height: 63px; } .title { font-size: .98rem; } .release-secondary { font-size: .7rem; } .episode-title { margin-left: 57px; }
+    .file-fact { font-size: .7rem; flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; } .file-fact:empty { display: none; } .file-fact::before { content: attr(data-label); font: .66rem var(--font-sans); color: var(--subtle); } .file-fact .badge { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
+    .depth { display: inline; margin-top: 0; } .date { grid-column: 1; min-width: 0; align-self: stretch; border-top: 1px solid var(--border); margin-top: 3px; padding-top: 14px; }
+    .release-links { grid-column: 2; flex-wrap: wrap; justify-content: flex-end; gap: 6px; border-top: 1px solid var(--border); margin-top: 3px; padding-top: 8px; }
+    .download-link { width: 40px; height: 40px; border: 1px solid var(--border); } .detail-link { color: var(--accent); }
+    .table-bottom { padding-top: 5px; }
+  }
+  @media (max-width: 760px) { .table-toolbar { gap: 10px; } .table-search { width: 100%; margin: 0; } tbody tr { padding: 17px; gap: 10px 14px; } }
 </style>

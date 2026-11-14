@@ -1,11 +1,34 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PageIntro from '../components/PageIntro.astro';
 import FrameCompare from '../components/FrameCompare.astro';
 import MetricChart from '../components/MetricChart.astro';
+import Icon from '../components/Icon.astro';
 import { getArchive, pathFor, releaseTitle } from '../lib/archive';
-const { anime, episodes, benchmarks } = await getArchive();
+const { anime, episodes, guides, benchmarks } = await getArchive();
 const seriesMap = new Map(anime.map((entry) => [entry.id, entry]));
-const pairs = episodes.flatMap((entry) => (entry.data.comparisons ?? []).map((comparison, index) => ({ entry, comparison, id: `${entry.id.replace(/\//g, '-')}-${index}` })));
+const pairs = [
+  ...episodes.flatMap((entry) => (entry.data.comparisons ?? []).map((comparison, index) => ({ comparison, id: `${entry.id.replace(/\//g, '-')}-${index}`, title: releaseTitle(entry, seriesMap.get(entry.data.anime.id)), href: pathFor('releases', entry.id) }))),
+  ...guides.flatMap((entry) => (entry.data.comparisons ?? []).map((comparison, index) => ({ comparison, id: `guide-${entry.id.replace(/[^a-zA-Z0-9-]/g, '-')}-comparison-${index}`, title: entry.data.title, href: pathFor('guides', entry.id) }))),
+];
+const sampleAssets = new Set(['/images/frame-source.svg', '/images/frame-encode.svg', '/images/detail-source.svg', '/images/detail-encode.svg']);
 ---
-<BaseLayout title="Frame comparisons & benchmarks" description="Inspect source and encode frames at native resolution, then explore rate–distortion measurements." searchable searchType="Comparison"><div class="page-heading"><span class="eyebrow">The inspection bench</span><h1>Look a little closer<span class="cyan">.</span></h1><p>Compare the frame, then read the curve. Perceptual metrics inform a decision; your eyes finish it.</p></div><div class="inspection-note panel"><span class="badge badge-cyan">INSPECTION TIPS</span><p>Drag the split, switch with <kbd>1</kbd> / <kbd>2</kbd>, or lock to native pixels. Focus a comparison to use its keyboard controls.</p></div><section class="comparison-section"><div class="section-heading"><h2>Frame pairs <span class="count">{pairs.length}</span></h2><span class="mono subtle section-note">LOCAL SVG DEMONSTRATIONS</span></div><div class="frame-grid">{pairs.map(({ entry, comparison, id }) => <div><a href={pathFor('releases', entry.id)} class="release-reference mono">{releaseTitle(entry, seriesMap.get(entry.data.anime.id))} ↗</a><FrameCompare comparison={comparison} id={id}/></div>)}</div>{pairs.length === 0 && <p class="empty-state">Frame comparisons will appear here when added to a release.</p>}</section><section class="comparison-section"><div class="section-heading"><h2>Rate–distortion notebook <span class="count">{benchmarks.length}</span></h2></div><div class="benchmark-stack">{benchmarks.map((benchmark) => <MetricChart benchmark={benchmark}/>)}</div></section></BaseLayout>
-<style>.inspection-note { display: flex; align-items: center; gap: 14px; padding: 13px 17px; } .inspection-note p { color: var(--muted); font-size: .8rem; } .comparison-section { margin-top: 30px; } .section-note { font-size: .58rem; } .frame-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; } .release-reference { display: inline-block; color: var(--subtle); font-size: .64rem; margin-bottom: 9px; } .release-reference:hover { color: var(--cyan); } .benchmark-stack { display: grid; gap: 20px; } @media (max-width: 1000px) { .frame-grid { grid-template-columns: 1fr; } } @media (max-width: 760px) { .inspection-note { align-items: flex-start; flex-direction: column; gap: 9px; } .section-note { display: none; } }</style>
+<BaseLayout title="Frame comparisons & benchmarks" description="Inspect source and encode frames at native resolution, then explore encoding measurements." searchable searchType="Comparison">
+  <PageIntro eyebrow="The inspection bench / source & encode" title="A closer look." description="Switch between the source and encode, inspect the detail, and make up your own mind. The numbers are part of the story." count={pairs.length} countLabel="frame pairs"/>
+  <details class="inspection-note panel"><summary><span><Icon name="compare" size={18}/> How to inspect a frame</span><span class="tips-label mono">SPLIT / A–B / NATIVE PIXELS</span></summary><p>Drag the split handle to reveal each image. Focus a comparison and use <kbd>1</kbd> / <kbd>2</kbd> to switch, or choose native pixels for a closer inspection.</p></details>
+  <section class="comparison-section"><div class="section-heading"><h2><span class="section-number">01</span> Source meets encode <span class="count">{pairs.length}</span></h2></div><div class="frame-grid">{pairs.map(({ comparison, id, title, href }) => <div class="frame-entry"><div class="frame-reference"><a href={href}>{title} <Icon name="arrow" size={13}/></a>{sampleAssets.has(comparison.sourceImage) && sampleAssets.has(comparison.encodeImage) && <span class="sample-label">Illustrated example</span>}</div><FrameCompare comparison={comparison} id={id}/></div>)}</div>{pairs.length === 0 && <p class="empty-state">Comparisons will appear here when added to a published release or guide.</p>}</section>
+  {benchmarks.length > 0 && <section class="comparison-section"><div class="section-heading"><h2><span class="section-number">02</span> The measurements <span class="count">{benchmarks.length}</span></h2></div><div class="benchmark-stack">{benchmarks.map((benchmark) => <MetricChart benchmark={benchmark}/>)}</div></section>}
+</BaseLayout>
+<style>
+  .inspection-note { padding: 16px 20px; background: var(--surface); }
+  summary { display: flex; justify-content: space-between; align-items: center; gap: 18px; list-style: none; color: var(--muted); font-size: .84rem; } summary::-webkit-details-marker { display: none; } summary::after { content: '+'; color: var(--accent); font: 1.2rem var(--font-mono); } details[open] summary::after { content: '−'; }
+  summary > span:first-child { display: flex; align-items: center; gap: 11px; } summary :global(svg) { color: var(--accent); }
+  .tips-label { color: var(--subtle); font-size: .59rem; margin-left: auto; }
+  .inspection-note p { color: var(--muted); font-size: .85rem; line-height: 1.8; margin-top: 18px; max-width: 780px; }
+  .comparison-section { margin-top: 34px; } .frame-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 24px; } .frame-entry { min-width: 0; }
+  .frame-reference { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
+  .frame-reference a { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .72rem; min-height: 30px; } .frame-reference a:hover { color: var(--accent); }
+  .sample-label { color: var(--subtle); font-size: .62rem; } .benchmark-stack { display: grid; gap: 22px; }
+  @media (max-width: 1000px) { .frame-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { .tips-label { display: none; } .inspection-note { padding: 16px; } }
+</style>

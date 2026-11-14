@@ -3,19 +3,50 @@ import BaseLayout from './BaseLayout.astro';
 import type { GuideEntry } from '../lib/archive';
 import { formatDate } from '../lib/archive';
 import Icon from '../components/Icon.astro';
+import GuideChoices from '../components/GuideChoices.astro';
+import ScreenshotGallery from '../components/ScreenshotGallery.astro';
+import FrameCompare from '../components/FrameCompare.astro';
+import VideoGallery from '../components/VideoGallery.astro';
+import { isAdult } from '../lib/audience.mjs';
 interface Heading { depth: number; slug: string; text: string; }
-interface Props { entry: GuideEntry; headings: Heading[]; readingMinutes?: number; }
-const { entry, headings, readingMinutes = 1 } = Astro.props;
-const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+interface Props { entry: GuideEntry; headings: Heading[]; readingMinutes?: number; preview?: boolean; }
+const { entry, headings, readingMinutes = 1, preview = false } = Astro.props;
 const d = entry.data;
+const localPreview = import.meta.env.DEV && preview;
+const id = `guide-${entry.id.replace(/[^a-zA-Z0-9-]/g, '-')}`;
+const toc = [
+  ...(d.summary || d.takeaways?.length ? [{ depth: 2, slug: 'start-here', text: 'Start here' }] : []),
+  ...(d.prerequisites?.length ? [{ depth: 2, slug: 'before-you-start', text: 'Before you start' }] : []),
+  ...(d.presets?.length ? [{ depth: 2, slug: 'choose-a-preset', text: 'Choose your starting point' }] : []),
+  ...headings.filter((heading) => heading.depth === 2 || heading.depth === 3),
+  ...(d.screenshots?.length ? [{ depth: 2, slug: 'guide-screenshots', text: 'Screenshots' }] : []),
+  ...(d.comparisons?.length ? [{ depth: 2, slug: 'guide-comparisons', text: 'Compare the results' }] : []),
+  ...(d.videos?.length ? [{ depth: 2, slug: 'guide-videos', text: 'Videos' }] : []),
+  ...(d.downloads?.length ? [{ depth: 2, slug: 'guide-downloads', text: 'Downloads' }] : []),
+];
 ---
-<BaseLayout title={d.title} description={d.description} searchable searchType="Guide">
-  <div class="breadcrumbs"><a href="/">Home</a><span>/</span><a href="/guides/">Guides</a><span>/</span><span>{d.category}</span></div>
-  <div class="guide-layout"><article><header class="guide-header"><span class="eyebrow">Field notes / {d.category}</span><h1 data-pagefind-meta="title">{d.title}</h1><p class="description">{d.description}</p><div class="pill-row"><span class="badge badge-violet">{d.difficulty}</span>{d.os?.map((os) => <span class="badge">{os}</span>)}<span class="guide-meta mono">Updated <time datetime={d.updatedDate.toISOString()}>{formatDate(d.updatedDate)}</time></span><span class="guide-meta mono">{readingMinutes} min read</span></div></header>
+<BaseLayout title={d.title} description={d.description} adult={isAdult(d)} searchable={!localPreview} searchType="Guide" noindex={localPreview}>
+  {localPreview && <aside class="preview-note panel" data-guide-preview-note><span class="badge badge-violet">LOCAL PREVIEW</span><span>{d.draft ? 'Unpublished draft' : 'Saved guide'} · visible only in your local development site</span><a href="/studio/">Back to the studio ↗</a></aside>}
+  <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/guides/">Guides</a><span>/</span><span>{d.category}</span></nav>
+  <div class="guide-layout" data-guide-reader><article>
+    <header class="guide-header"><span class="eyebrow">Practical guide / {d.category}</span><h1 data-pagefind-meta="title">{d.title}</h1><p class="description">{d.description}</p>
+      <div class="pill-row"><span class="badge badge-violet">{d.difficulty}</span>{d.version && <span class="badge">{d.version}</span>}{d.os?.map((os) => <span class="badge">{os}</span>)}<span class="guide-meta">Updated <time datetime={d.updatedDate.toISOString()}>{formatDate(d.updatedDate)}</time></span><span class="guide-meta">{readingMinutes} min read</span></div>
+    </header>
     {toc.length > 0 && <details class="mobile-toc panel" data-pagefind-ignore><summary>On this page</summary><nav aria-label="Mobile table of contents"><ul>{toc.map((heading) => <li data-depth={heading.depth}><a href={`#${heading.slug}`}>{heading.text}</a></li>)}</ul></nav></details>}
-    <div class="prose guide-body"><slot /></div><footer class="guide-end"><span class="mono"><span class="cyan">//</span> END OF FIELD NOTE</span><a href="/guides/" class="text-link">More guides <Icon name="arrow" size={14}/></a></footer></article>
-    <aside class="guide-sidebar" data-pagefind-ignore>{toc.length > 0 && <nav class="toc" aria-label="Table of contents"><span class="toc-heading mono">ON THIS PAGE</span><ul>{toc.map((heading) => <li data-depth={heading.depth}><a href={`#${heading.slug}`} data-toc-link>{heading.text}</a></li>)}</ul></nav>}<div class="guide-tags"><span class="toc-heading mono">INDEX TERMS</span><div class="pill-row">{d.tags.map((tag) => <span class="badge">{tag}</span>)}</div></div><a class="guide-back text-link" href="/guides/"><Icon name="book" size={15}/> Guide library</a></aside>
-  </div>
+    {(d.summary || (d.takeaways && d.takeaways.length > 0)) && <section id="start-here" class="guide-intro panel"><span class="eyebrow">Start here</span><h2>What this guide helps you do</h2>{d.summary && <p>{d.summary}</p>}{d.takeaways && d.takeaways.length > 0 && <ul>{d.takeaways.map((item) => <li><Icon name="check" size={14}/><span>{item}</span></li>)}</ul>}</section>}
+    {d.prerequisites && d.prerequisites.length > 0 && <section id="before-you-start" class="prerequisites"><h2>Before you start</h2><ul>{d.prerequisites.map((item) => <li>{item}</li>)}</ul></section>}
+    {d.presets && d.presets.length > 0 && <GuideChoices presets={d.presets} id={id}/>}
+    <div class="prose guide-body"><slot /></div>
+    {d.screenshots && d.screenshots.length > 0 && <section id="guide-screenshots" class="guide-media"><div class="section-heading"><h2>Screenshots</h2></div><ScreenshotGallery screenshots={d.screenshots} id={id}/></section>}
+    {d.comparisons && d.comparisons.length > 0 && <section id="guide-comparisons" class="guide-media"><div class="section-heading"><h2>Compare the results</h2></div><p class="media-note">Drag the split handle or switch to 1 / 2 Toggle. Use native pixels to inspect detail.</p><div class="comparison-stack">{d.comparisons.map((comparison, index) => <FrameCompare comparison={comparison} id={`${id}-comparison-${index}`}/>)}</div></section>}
+    {d.videos && d.videos.length > 0 && <section id="guide-videos" class="guide-media"><div class="section-heading"><h2>Videos</h2></div><VideoGallery videos={d.videos}/></section>}
+    {d.downloads && d.downloads.length > 0 && <section id="guide-downloads" class="guide-media"><div class="section-heading"><h2>Downloads</h2></div><div class="guide-downloads">{d.downloads.map((download) => <a class="button" href={download.url} target={download.isMagnet ? undefined : '_blank'} rel="noreferrer"><Icon name="download" size={15}/><span>{download.label}{download.provider && <small>{download.provider}</small>}</span><Icon name="external" size={12}/></a>)}</div></section>}
+    <footer class="guide-end"><span>Test a sample. Inspect the result. Keep what works.</span><a href="/guides/" class="text-link">More guides <Icon name="arrow" size={14}/></a></footer>
+  </article><aside class="guide-sidebar" data-pagefind-ignore>
+    {toc.length > 0 && <nav class="toc" aria-label="Table of contents"><span class="toc-heading">ON THIS PAGE</span><ul>{toc.map((heading) => <li data-depth={heading.depth}><a href={`#${heading.slug}`} data-toc-link>{heading.text}</a></li>)}</ul></nav>}
+    {d.tags.length > 0 && <div class="guide-tags"><span class="toc-heading">TOPICS</span><div class="pill-row">{d.tags.map((tag) => <span class="badge">{tag}</span>)}</div></div>}
+    <a class="guide-back text-link" href="/guides/"><Icon name="book" size={15}/> Guide library</a>
+  </aside></div>
 </BaseLayout>
 <script>
   import { initCopyButtons } from '../scripts/copy';
@@ -24,6 +55,14 @@ const d = entry.data;
     const button = document.createElement('button'); button.type = 'button'; button.className = 'code-copy'; button.textContent = 'Copy'; button.dataset.copyTarget = pre.id; button.setAttribute('aria-label', `Copy code block ${index + 1}`); pre.append(button);
   });
   initCopyButtons();
+  document.querySelectorAll<HTMLTableElement>('.guide-body table').forEach((table) => {
+    const wrapper = document.createElement('div'); wrapper.className = 'guide-table-scroll'; wrapper.tabIndex = 0; wrapper.setAttribute('role', 'region'); wrapper.setAttribute('aria-label', 'Scrollable guide table'); table.replaceWith(wrapper); wrapper.append(table);
+  });
+  document.querySelectorAll<HTMLAnchorElement>('[data-guide-reader] a[href^="#"]').forEach((link) => link.addEventListener('click', () => {
+    const target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+    let parent = target?.parentElement;
+    while (parent) { if (parent instanceof HTMLDetailsElement) parent.open = true; parent = parent.parentElement; }
+  }));
   const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-toc-link]'));
   const visible = new Set<string>();
   const observer = new IntersectionObserver((entries) => {
@@ -31,26 +70,50 @@ const d = entry.data;
     const active = links.find((link) => visible.has(decodeURIComponent(link.hash.slice(1))));
     links.forEach((link) => { if (link === active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); });
   }, { rootMargin: '-100px 0px -60% 0px' });
-  document.querySelectorAll('.guide-body h2, .guide-body h3').forEach((heading) => observer.observe(heading));
+  links.forEach((link) => { const target = document.getElementById(decodeURIComponent(link.hash.slice(1))); if (target) observer.observe(target); });
 </script>
 <style>
-  .guide-layout { display: grid; grid-template-columns: minmax(0, 850px) 235px; justify-content: center; gap: 64px; padding-bottom: 15px; }
-  .guide-header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 24px; }
-  h1 { font-size: clamp(2rem, 3.7vw, 2.8rem); margin: 12px 0 16px; max-width: 820px; line-height: 1.2; }
-  .description { color: var(--muted); font-size: 1rem; line-height: 1.8; margin-bottom: 20px; }
-  .guide-meta { color: var(--subtle); font-size: .64rem; margin-left: 8px; }
+  .preview-note { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 13px 18px; margin-bottom: 24px; color: var(--muted); font-size: .8rem; }
+  .preview-note a { margin-left: auto; color: var(--violet); }
+  .guide-layout { display: grid; grid-template-columns: minmax(0, 940px) 215px; justify-content: center; gap: 48px; padding-bottom: 15px; }
+  article { min-width: 0; }
+  .guide-header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 28px; }
+  h1 { font: 400 clamp(2.1rem, 4vw, 3.4rem)/1.15 var(--font-display); margin: 16px 0 20px; max-width: 850px; letter-spacing: -.045em; text-wrap: balance; }
+  .description { color: var(--muted); font-size: 1.05rem; line-height: 1.8; margin-bottom: 20px; max-width: 760px; }
+  .guide-meta { color: var(--subtle); font-size: .72rem; margin-left: 6px; }
+  .guide-intro { padding: 26px; margin: 28px 0; background: var(--accent-wash); border-left: 2px solid var(--accent); }
+  .guide-intro h2 { margin: 10px 0 14px; font: 400 1.7rem/1.3 var(--font-display); }
+  .guide-intro p { color: var(--muted); line-height: 1.8; }
+  .guide-intro ul { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 10px; }
+  .guide-intro li { display: flex; gap: 10px; align-items: baseline; font-size: .9rem; }
+  .guide-intro li :global(svg) { color: var(--cyan); flex-shrink: 0; }
+  .prerequisites { margin: 28px 0 34px; padding: 22px 24px; border: 1px solid var(--border); border-radius: var(--radius); }
+  .prerequisites h2 { font-size: 1.15rem; }
+  .prerequisites ul { margin: 15px 0 0; padding-left: 20px; color: var(--muted); font-size: .88rem; display: grid; gap: 10px; }
+  .guide-media { margin-top: 38px; padding-top: 28px; border-top: 1px solid var(--border); scroll-margin-top: 100px; }
+  .guide-media h2 { font-size: 1.5rem; }
+  .comparison-stack { display: grid; gap: 20px; }
+  .media-note { color: var(--muted); margin: 12px 0 18px; font-size: .84rem; }
+  .guide-downloads { display: flex; flex-wrap: wrap; gap: 12px; }
+  .guide-downloads small { display: block; color: var(--subtle); font-size: .67rem; }
   .guide-sidebar { position: sticky; top: 104px; align-self: start; border-left: 1px solid var(--border); padding-left: 24px; margin-top: 9px; }
-  .toc-heading { display: block; font-size: .61rem; letter-spacing: .09em; color: var(--subtle); margin-bottom: 14px; }
+  .toc-heading { display: block; font: .65rem var(--font-mono); letter-spacing: .08em; color: var(--subtle); margin-bottom: 15px; }
   .toc ul, .mobile-toc ul { list-style: none; margin: 0; padding: 0; }
-  .toc li, .mobile-toc li { padding-bottom: 11px; line-height: 1.5; font-size: .77rem; color: var(--muted); }
-  li[data-depth='3'] { padding-left: 14px; font-size: .72rem; }
+  .toc li, .mobile-toc li { padding-bottom: 12px; line-height: 1.5; font-size: .8rem; color: var(--muted); }
+  li[data-depth='3'] { padding-left: 12px; font-size: .73rem; }
   .toc a:hover, .toc a[aria-current] { color: var(--cyan); }
   .guide-tags { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
-  .guide-tags .badge { font-size: .6rem; }
-  .guide-back { margin-top: 25px; font-size: .74rem; }
-  .guide-end { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 18px; display: flex; justify-content: space-between; gap: 12px; color: var(--subtle); font-size: .63rem; }
-  .mobile-toc { display: none; padding: 12px 16px; margin-bottom: 24px; color: var(--muted); font-size: .83rem; }
+  .guide-tags .badge { font-size: .65rem; }
+  .guide-back { margin-top: 25px; font-size: .78rem; }
+  .guide-end { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--subtle); font-size: .78rem; }
+  .mobile-toc { display: none; padding: 14px 18px; margin-bottom: 24px; color: var(--muted); font-size: .88rem; }
   .mobile-toc nav { margin-top: 14px; }
-  @media (max-width: 1050px) { .guide-layout { grid-template-columns: minmax(0, 1fr) 210px; gap: 34px; } }
-  @media (max-width: 800px) { .guide-layout { display: block; } .guide-sidebar { display: none; } .mobile-toc { display: block; } .guide-meta { margin-left: 3px; } }
+  .guide-body :global(details) { margin: 28px 0; padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--radius); }
+  .guide-body :global(details > summary) { font-weight: 600; color: var(--text); }
+  .guide-body :global(details[open] > summary) { margin-bottom: 20px; }
+  .guide-body :global(.guide-table-scroll) { overflow-x: auto; margin-block: 22px; border: 1px solid var(--border); border-radius: 5px; }
+  .guide-body :global(.guide-table-scroll table) { margin: 0; }
+  .guide-body :global(th), .guide-body :global(td) { white-space: nowrap; }
+  @media (max-width: 1100px) { .guide-layout { grid-template-columns: minmax(0, 1fr) 190px; gap: 30px; } }
+  @media (max-width: 850px) { .guide-layout { display: block; } .guide-sidebar { display: none; } .mobile-toc { display: block; } .guide-meta { margin-left: 0; } .guide-intro, .prerequisites { padding: 20px; } }
 </style>

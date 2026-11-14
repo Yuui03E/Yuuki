@@ -1,0 +1,17 @@
+---
+interface Props { eyebrow: string; title: string; description: string; count?: number; countLabel?: string; }
+const { eyebrow, title, description, count, countLabel = 'entries' } = Astro.props;
+---
+<header class="page-intro">
+  <div><span class="eyebrow">{eyebrow}</span><h1>{title}</h1></div>
+  <div class="intro-note"><p>{description}</p>{count !== undefined && <span class="intro-count mono"><strong>{String(count).padStart(2, '0')}</strong> {countLabel}</span>}</div>
+</header>
+<style>
+  .page-intro { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, .8fr); align-items: end; gap: 48px; padding: 52px 0 32px; }
+  h1 { font: 400 clamp(2.8rem, 5.5vw, 4.6rem)/1.1 var(--font-display); letter-spacing: -.055em; margin-top: 17px; text-wrap: balance; }
+  .intro-note { padding-bottom: 4px; }
+  p { color: var(--muted); line-height: 1.8; font-size: .94rem; max-width: 440px; }
+  .intro-count { display: inline-flex; align-items: center; gap: 10px; font-size: .66rem; color: var(--subtle); margin-top: 18px; }
+  strong { font-weight: 400; font-size: 1rem; color: var(--accent); }
+  @media (max-width: 760px) { .page-intro { grid-template-columns: 1fr; gap: 18px; padding: 32px 0 24px; } h1 { margin-top: 12px; } p { font-size: .88rem; } .intro-count { margin-top: 12px; } }
+</style>

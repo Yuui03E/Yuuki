@@ -1,7 +1,11 @@
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { initStudioMedia } from './studio-media';
+import { initGuideEditor } from './studio-guide';
+import { initStudioRefresh } from './studio-refresh';
+import { deferMediaHtml } from '../lib/audience.mjs';
 
-type Media = { id: number; type: string; title: { english?: string; romaji?: string; native?: string }; format?: string; season?: string; seasonYear?: number; startDate?: { year?: number }; episodes?: number; chapters?: number; status?: string; studios?: { nodes: { name: string }[] }; genres?: string[]; tags?: { name: string; isMediaSpoiler?: boolean }[]; coverImage: { extraLarge: string }; bannerImage?: string; description?: string };
+type Media = { isAdult?: boolean; id: number; type: string; title: { english?: string; romaji?: string; native?: string }; format?: string; season?: string; seasonYear?: number; startDate?: { year?: number }; episodes?: number; chapters?: number; status?: string; studios?: { nodes: { name: string }[] }; genres?: string[]; tags?: { name: string; isMediaSpoiler?: boolean }[]; coverImage: { extraLarge: string }; bannerImage?: string; description?: string };
 type Field = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
 export function initStudio() {
@@ -32,12 +36,15 @@ export function initStudio() {
       const first = row.querySelector<HTMLInputElement>('input'); group.querySelector('[data-rows]')!.append(row); first?.focus();
     });
   });
+  initStudioMedia(root);
+  initGuideEditor(root);
+  const refresh = initStudioRefresh(root);
   const editor = root.querySelector<HTMLTextAreaElement>('[data-guide-editor]')!;
   const preview = root.querySelector<HTMLElement>('[data-guide-preview]')!;
   let previewTimer: ReturnType<typeof setTimeout>;
   editor.addEventListener('input', () => {
     clearTimeout(previewTimer);
-    previewTimer = setTimeout(() => { preview.innerHTML = DOMPurify.sanitize(marked.parse(editor.value || '*Your guide preview will appear here.*', { async: false }), { USE_PROFILES: { html: true } }); }, 120);
+    previewTimer = setTimeout(() => { const html = DOMPurify.sanitize(marked.parse(editor.value || '*Your guide preview will appear here.*', { async: false }), { USE_PROFILES: { html: true } }); preview.innerHTML = editor.closest('form')?.querySelector<HTMLInputElement>('[name="adult"]')?.checked ? deferMediaHtml(html) : html; }, 120);
   });
   const animeForm = root.querySelector<HTMLFormElement>('[data-studio-form="anime"]')!;
   const query = root.querySelector<HTMLInputElement>('[data-anilist-query]')!;
@@ -58,6 +65,7 @@ export function initStudio() {
       tags: [...new Set([...(media.genres ?? []), ...(media.tags ?? []).filter((tag) => !tag.isMediaSpoiler).map((tag) => tag.name)])].slice(0, 60).join(', '),
       coverImage: media.coverImage.extraLarge, bannerImage: media.bannerImage, synopsis: plain.body.textContent?.trim(),
     };
+    animeForm.querySelector<HTMLInputElement>('[name="adult"]')!.checked = media.isAdult === true;
     Object.entries(values).forEach(([name, value]) => setField(name, value));
     status.textContent = `Imported ${values.title}. Review the archive status and source before saving.`;
   };
@@ -66,7 +74,7 @@ export function initStudio() {
     const urlMatch = /^https?:\/\/(?:www\.)?anilist\.co\/(anime|manga)\/(\d+)(?:[/?#]|$)/i.exec(raw);
     const id = /^\d+$/.test(raw) ? Number(raw) : urlMatch ? Number(urlMatch[2]) : undefined;
     if (urlMatch) mediaType.value = urlMatch[1].toUpperCase();
-    const selection = 'id type title { english romaji native } format season seasonYear startDate { year } episodes chapters status studios(isMain: true) { nodes { name } } genres tags { name isMediaSpoiler } coverImage { extraLarge } bannerImage description(asHtml: false)';
+    const selection = 'id type isAdult title { english romaji native } format season seasonYear startDate { year } episodes chapters status studios(isMain: true) { nodes { name } } genres tags { name isMediaSpoiler } coverImage { extraLarge } bannerImage description(asHtml: false)';
     searchButton.disabled = true; status.textContent = 'Searching AniList…'; results.replaceChildren();
     const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 15000);
     try {
@@ -78,9 +86,9 @@ export function initStudio() {
       status.textContent = media.length ? `${media.length} matches. Select one to fill the form.` : 'No matches. Try another title or use manual entry.';
       media.forEach((item) => {
         const button = document.createElement('button'); button.type = 'button';
-        const image = document.createElement('img'); image.src = item.coverImage.extraLarge; image.alt = ''; image.loading = 'lazy';
+        const image = document.createElement('img'); if (!item.isAdult) image.src = item.coverImage.extraLarge; image.alt = ''; image.loading = 'lazy';
         const text = document.createElement('span'); const title = document.createElement('strong'); title.textContent = item.title.english || item.title.romaji || item.title.native || `AniList ${item.id}`;
-        const meta = document.createElement('small'); meta.textContent = [item.format, item.seasonYear || item.startDate?.year, `#${item.id}`].filter(Boolean).join(' · ');
+        const meta = document.createElement('small'); meta.textContent = [item.format, item.seasonYear || item.startDate?.year, `#${item.id}`, item.isAdult ? '18+' : ''].filter(Boolean).join(' · ');
         text.append(title, meta); button.append(image, text); button.addEventListener('click', () => fill(item)); results.append(button);
       });
     } catch (error) { status.textContent = `${error instanceof Error ? error.message : 'Search failed.'} Manual entry is available below.`; }
@@ -108,24 +116,44 @@ export function initStudio() {
       form.querySelectorAll<HTMLElement>('[data-repeater]').forEach((group) => {
         const rows = Array.from(group.querySelectorAll<HTMLElement>('[data-rows] .repeat-row')).map((row) => {
           const values: Record<string, unknown> = {};
-          row.querySelectorAll<HTMLInputElement>('[data-key]').forEach((field) => { if (field.type === 'checkbox') { if (field.checked) values[field.dataset.key!] = true; } else if (field.value.trim()) values[field.dataset.key!] = field.type === 'number' ? Number(field.value) : field.value.trim(); });
+          row.querySelectorAll<Field>('[data-key]').forEach((field) => { if (field instanceof HTMLInputElement && field.type === 'checkbox') { if (field.checked) values[field.dataset.key!] = true; } else if (field.value.trim()) values[field.dataset.key!] = field instanceof HTMLInputElement && field.type === 'number' ? Number(field.value) : field.value.trim(); });
           return values;
         }).filter((row) => Object.keys(row).length);
-        if (rows.length) data[group.dataset.repeater!] = rows;
+        if (rows.length) data[group.dataset.repeater!] = group.dataset.values === 'list' ? rows.map((row) => row.value) : rows;
       });
       submit.disabled = true; output.dataset.error = 'false'; output.textContent = 'Validating and saving local content…';
+      const finishSave = refresh.beginSave();
       try {
-        const response = await fetch(`/__studio/save-${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...envelope, data }) });
+        const updating = kind === 'guide' && Boolean(form.dataset.sourceHash);
+        const content = { ...envelope, data };
+        const response = await fetch(updating ? '/__studio/update-guide' : `/__studio/save-${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updating ? { id: form.dataset.guideId, expectedSha256: form.dataset.sourceHash, content } : content) });
         const result = await response.json();
         if (!response.ok) {
           for (const issue of result.fields ?? []) { const name = issue.path.replace(/^data\./, ''); (form.elements.namedItem(name) as Field | null)?.setAttribute('aria-invalid', 'true'); }
           throw new Error([result.error, ...(result.fields ?? []).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`)].join(' '));
         }
-        output.textContent = `Saved ${result.file}${result.draft ? ' as a draft.' : result.hiddenByParent ? '. Hidden from public pages because its series is a draft.' : '.'}`;
+        output.textContent = `Saved ${result.updated ? 'changes to ' : ''}${result.file}${result.draft ? ' as a draft.' : result.hiddenByParent ? '. Hidden from public pages because its series is a draft.' : '.'}`;
         if (result.url) { const link = document.createElement('a'); link.href = result.url; link.textContent = 'View entry →'; output.append(link); }
-        if (kind === 'anime') { const select = root.querySelector<HTMLSelectElement>('select[name="anime"]')!; if (!Array.from(select.options).some((option) => option.value === result.id)) select.add(new Option(`${data.title}${result.draft ? ' · draft' : ''}`, result.id)); }
+        if (kind === 'guide' && result.previewUrl) { const link = document.createElement('a'); link.href = result.previewUrl; link.textContent = 'Preview saved guide →'; output.append(link); }
+        if (kind === 'guide') {
+          form.dataset.guideId = result.id; form.dataset.sourceHash = result.sha256;
+          (form.elements.namedItem('slug') as HTMLInputElement).readOnly = true;
+          form.querySelector('[data-guide-save-label]')!.textContent = 'Save guide changes';
+          const select = root.querySelector<HTMLSelectElement>('[data-guide-select]')!;
+          const option = Array.from(select.options).find((item) => item.value === result.id) ?? new Option('', result.id);
+          option.textContent = `${data.title}${result.draft ? ' · draft' : ''}`; if (!option.parentElement) select.add(option); select.value = result.id;
+        }
+        if (kind === 'anime') { const select = root.querySelector<HTMLSelectElement>('select[name="anime"]')!; if (!Array.from(select.options).some((option) => option.value === result.id)) { const option = new Option(`${data.title}${result.draft ? ' · draft' : ''}${result.adult ? ' · 18+' : ''}`, result.id); option.dataset.adult = String(result.adult); select.add(option); } }
+        const backupStatus = document.createElement('span'); backupStatus.setAttribute('role', 'status'); output.append(backupStatus);
+        backupStatus.textContent = result.localBackup ? ' Post folder backed up locally; backing up its source privately to R2…' : ' Post saved; local backup needs repair. Trying the backup again…';
+        try {
+          const backup = await fetch('/__studio/media-backup-post', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ post: result.post }) });
+          if (!backup.ok) throw new Error();
+          backupStatus.textContent = ' Post source and media manifest backed up locally and privately to R2.';
+        } catch { backupStatus.textContent = ' Post saved on this PC. Online post backup could not complete; run npm run media:backup to retry.'; }
       } catch (error) { output.dataset.error = 'true'; output.textContent = error instanceof Error ? error.message : 'The content could not be saved.'; }
-      finally { submit.disabled = false; }
+      finally { submit.disabled = false; finishSave(); }
     });
   });
+  refresh.restore();
 }

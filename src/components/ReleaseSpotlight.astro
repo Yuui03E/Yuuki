@@ -1,0 +1,67 @@
+---
+import Icon from './Icon.astro';
+import { episodeCaption, formatDate, pathFor, releaseTitle, type AnimeEntry, type EpisodeEntry } from '../lib/archive';
+interface Props { releases: EpisodeEntry[]; series: AnimeEntry[]; fallback?: AnimeEntry; }
+interface Slide { id: string; title: string; linkLabel: string; href: string; image?: string; tag?: string; date?: Date; facts: (string | undefined)[]; }
+const { releases, series, fallback } = Astro.props;
+const first = releases.find((entry) => series.some((item) => item.data.featured && item.id === entry.data.anime.id)) ?? releases[0];
+const ordered = first ? [first, ...releases.filter((entry) => entry.id !== first.id)] : [];
+const slides = ordered.map<Slide>((release) => {
+  const parent = series.find((item) => item.id === release.data.anime.id);
+  return {
+    id: release.id, title: parent?.data.title ?? release.data.title ?? 'Release',
+    linkLabel: releaseTitle(release, parent), href: pathFor('releases', release.id),
+    image: release.data.thumbnail ?? parent?.data.bannerImage ?? parent?.data.coverImage,
+    tag: release.data.releaseTag ?? parent?.data.releaseTag,
+    date: release.data.releaseDate,
+    facts: [episodeCaption(release), release.data.source, release.data.videoCodec].filter(Boolean),
+  };
+});
+if (!slides.length && fallback) slides.push({
+  id: fallback.id, title: fallback.data.title, linkLabel: fallback.data.title,
+  href: pathFor('anime', fallback.id), image: fallback.data.bannerImage ?? fallback.data.coverImage,
+  tag: fallback.data.releaseTag, date: undefined,
+  facts: [fallback.data.mediaType, fallback.data.sourceType, fallback.data.defaultCodec].filter(Boolean),
+});
+const SpotlightControls = slides.length > 1 ? (await import('./SpotlightControls.astro')).default : null;
+---
+<section class:list={['spotlight', { 'empty-spotlight': !slides.length }]} aria-label="Release spotlight" aria-roledescription={SpotlightControls ? 'carousel' : undefined} data-release-spotlight>
+  {slides.length ? <>
+    <div class="spotlight-slides">
+      {slides.map((slide, index) => <div class="spotlight-slide" data-spotlight-slide data-release-id={slide.id} hidden={index !== 0} role={SpotlightControls ? 'group' : undefined} aria-roledescription={SpotlightControls ? 'slide' : undefined} aria-label={SpotlightControls ? `${index + 1} of ${slides.length}` : undefined}>
+        <a href={slide.href} aria-label={`Open ${slide.linkLabel}`} data-spotlight-link>
+          <div class="spotlight-top"><span class="mono"><i></i>{ordered.length ? 'RELEASE SPOTLIGHT' : 'FROM THE ARCHIVE'}</span>{slide.date && <time datetime={slide.date.toISOString()}>{formatDate(slide.date)}</time>}</div>
+          <div class="spotlight-scene">
+            {slide.image ? <img src={index === 0 ? slide.image : undefined} data-src={index ? slide.image : undefined} width="960" height="560" alt={`${slide.title} artwork`} fetchpriority={index === 0 ? 'high' : 'low'} decoding="async"/> : <span class="artwork-placeholder" aria-hidden="true">Yuuki <em>/</em></span>}
+            <span class="frame-corner corner-left" aria-hidden="true"></span><span class="frame-corner corner-right" aria-hidden="true"></span>{slide.tag && <span class="scene-label mono">{slide.tag}</span>}
+          </div>
+          <div class="spotlight-caption"><div><h2 title={slide.title}>{slide.title}</h2>{slide.facts.length > 0 && <p class="mono">{slide.facts.join(' / ')}</p>}</div><span class="spotlight-arrow"><Icon name="arrow" size={23}/></span></div>
+        </a>
+      </div>)}
+    </div>
+    {SpotlightControls && <SpotlightControls count={slides.length} />}
+  </> : <><Icon name="layers" size={32}/><h2>The next story starts here.</h2><p>Published entries will appear in the archive, with their releases and notes attached.</p><a href="/anime/" class="text-link">Visit the archive <Icon name="arrow"/></a></>}
+</section>
+<style>
+  .spotlight { min-width: 0; border: 1px solid var(--border-strong); background: var(--surface); padding: 9px; border-radius: 4px; transition: border-color .15s; }
+  .spotlight:has(a:hover), .spotlight:focus-within { border-color: var(--accent); }
+  .spotlight-slide > a { display: block; }
+  .spotlight-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 7px 7px 15px; color: var(--subtle); font-size: .64rem; }
+  .spotlight-top > span { display: flex; align-items: center; gap: 8px; font-size: .58rem; letter-spacing: .09em; color: var(--muted); }
+  .spotlight-top i { display: inline-block; width: 5px; height: 5px; background: var(--accent); border-radius: 50%; }
+  .spotlight-scene { position: relative; aspect-ratio: 1.67; overflow: hidden; background: var(--surface-hover); }
+  .spotlight-scene img { width: 100%; height: 100%; object-fit: cover; }
+  .spotlight-scene::after { content: ''; position: absolute; inset: 55% 0 0; background: linear-gradient(transparent, rgb(0 0 0 / 65%)); pointer-events: none; }
+  .frame-corner { position: absolute; top: 12px; width: 14px; height: 14px; border-top: 1px solid #e9eddf; opacity: .6; }
+  .corner-left { left: 12px; border-left: 1px solid #e9eddf; } .corner-right { right: 12px; border-right: 1px solid #e9eddf; }
+  .scene-label { position: absolute; bottom: 12px; left: 15px; z-index: 1; color: #f0f1e9; font-size: .66rem; letter-spacing: .04em; }
+  .artwork-placeholder { display: grid; place-content: center; height: 100%; font: 400 3rem var(--font-display); color: var(--text); }
+  .artwork-placeholder em { color: var(--accent); }
+  .spotlight-caption { display: flex; align-items: center; gap: 18px; height: 144px; padding: 16px 10px; }
+  .spotlight-caption > div { min-width: 0; flex: 1; }
+  .spotlight-caption h2 { font: 400 clamp(1.3rem, 2.05vw, 1.75rem)/1.25 var(--font-display); letter-spacing: -.035em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .spotlight-caption p { color: var(--muted); font-size: .68rem; line-height: 1.6; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .spotlight-arrow { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--border-strong); border-radius: 50%; color: var(--accent); flex-shrink: 0; }
+  .empty-spotlight { padding: 38px; } .empty-spotlight > svg { color: var(--accent); } .empty-spotlight h2 { margin: 25px 0 14px; font: 400 2rem var(--font-display); } .empty-spotlight p { color: var(--muted); } .empty-spotlight .text-link { margin-top: 22px; }
+  @media (max-width: 760px) { .spotlight-caption h2 { font-size: 1.5rem; } .spotlight-caption { height: 132px; } }
+</style>

@@ -31,12 +31,12 @@ const names: Record<string, string> = { ssimulacra2: 'SSIMULACRA 2', vmaf: 'VMAF
     const axisSelect = root.querySelector<HTMLSelectElement>('[data-axis-select]')!;
     const canvas = root.querySelector<HTMLCanvasElement>('canvas')!;
     const options = (): ChartOptions<'line'> => {
-      const styles = getComputedStyle(document.documentElement); const muted = styles.getPropertyValue('--muted').trim(); const border = styles.getPropertyValue('--border').trim();
+      const styles = getComputedStyle(document.documentElement); const muted = styles.getPropertyValue('--muted').trim(); const border = styles.getPropertyValue('--border').trim(); const font = { family: styles.getPropertyValue('--font-sans').trim() };
       return { responsive: true, maintainAspectRatio: false, animation: false, parsing: false,
         interaction: { mode: 'nearest', intersect: false },
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.parsed.y?.toFixed(2)} · ${context.parsed.x} ${axisSelect.value === 'crf' ? 'CRF' : 'kb/s'}` } } },
-        scales: { x: { type: 'linear', title: { display: true, text: axisSelect.value === 'crf' ? 'CRF' : 'Bitrate (kb/s)', color: muted }, ticks: { color: muted, maxTicksLimit: 8 }, grid: { color: border } },
-          y: { title: { display: true, text: info[metricSelect.value as Metric].name, color: muted }, ticks: { color: muted }, grid: { color: border } } },
+        plugins: { legend: { display: false }, tooltip: { bodyFont: font, titleFont: font, callbacks: { label: (context) => `${context.dataset.label}: ${context.parsed.y?.toFixed(2)} · ${context.parsed.x} ${axisSelect.value === 'crf' ? 'CRF' : 'kb/s'}` } } },
+        scales: { x: { type: 'linear', title: { display: true, text: axisSelect.value === 'crf' ? 'CRF' : 'Bitrate (kb/s)', color: muted, font }, ticks: { color: muted, maxTicksLimit: 8, font }, grid: { color: border } },
+          y: { title: { display: true, text: info[metricSelect.value as Metric].name, color: muted, font }, ticks: { color: muted, font }, grid: { color: border } } },
       };
     };
     const datasets = () => data.series.map((series, index) => ({ label: series.label, borderColor: series.color ?? (index ? '#a855f7' : '#00e5ff'), backgroundColor: series.color ?? (index ? '#a855f7' : '#00e5ff'), borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, tension: .15,
@@ -45,7 +45,7 @@ const names: Record<string, string> = { ssimulacra2: 'SSIMULACRA 2', vmaf: 'VMAF
     const chart = new Chart(canvas, { type: 'line', data: { datasets: datasets() }, options: options() });
     const update = () => { chart.data.datasets = datasets(); chart.options = options(); chart.update(); root.querySelector('[data-metric-help]')!.textContent = info[metricSelect.value as Metric].help; canvas.setAttribute('aria-label', `${data.title}: ${info[metricSelect.value as Metric].name} against ${axisSelect.value === 'crf' ? 'CRF' : 'Bitrate in kb/s'}`); };
     metricSelect.addEventListener('change', update); axisSelect.addEventListener('change', update);
-    new MutationObserver(update).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    document.addEventListener('yuuki:appearance-change', update);
     update();
   });
 </script>

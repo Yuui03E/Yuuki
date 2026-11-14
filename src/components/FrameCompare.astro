@@ -1,15 +1,14 @@
 ---
-import type { EpisodeEntry } from '../lib/archive';
+import type { FrameComparison } from '../lib/content-fields';
 import Icon from './Icon.astro';
-type Pair = NonNullable<EpisodeEntry['data']['comparisons']>[number];
-interface Props { comparison: Pair; id: string; }
+interface Props { comparison: FrameComparison; id: string; }
 const { comparison: c, id } = Astro.props;
 ---
-<figure class="frame-compare panel" id={id} data-frame-compare data-mode="split" data-frame="source" tabindex="0" aria-label={`${c.title}. Use 1 and 2 to toggle frames, or drag the split handle.`}>
+<figure class="frame-compare panel" id={id} data-frame-compare data-mode="split" data-frame="source" tabindex="0" aria-label={`${c.title}. Use 1 and 2 or Space to toggle frames, or drag the split handle.`}>
   <div class="compare-header"><div><span class="eyebrow">Frame inspection{c.frameNumber !== undefined && <> / {String(c.frameNumber).padStart(6, '0')}</>}</span><h3>{c.title}</h3></div><div class="mode-switch" role="group" aria-label="Comparison mode"><button type="button" data-compare-mode="split" aria-pressed="true"><Icon name="compare" size={14}/> Split</button><button type="button" data-compare-mode="toggle" aria-pressed="false">1 / 2 Toggle</button></div></div>
   <div class="compare-viewport" data-compare-viewport><div class="compare-stage" style="--split:50%" data-compare-stage><img class="source-image" src={c.sourceImage} alt={`${c.sourceLabel}: ${c.title}`} loading="lazy" data-source-image/><img class="encode-image" src={c.encodeImage} alt={`${c.encodeLabel}: ${c.title}`} loading="lazy" data-encode-image/><span class="image-label source-label mono">{c.sourceLabel}</span><span class="image-label encode-label mono">{c.encodeLabel}</span><button type="button" class="split-handle" data-split-handle aria-label="Drag the frame comparison split" tabindex="-1"><span>‹ ›</span></button></div></div>
   <div class="compare-controls"><div class="split-control" data-split-control><label for={`${id}-range`} class="sr-only">Source and encode split percentage</label><input type="range" id={`${id}-range`} min="0" max="100" value="50" data-split-range/><output for={`${id}-range`} data-split-output class="mono">50%</output></div><div class="frame-toggle" data-frame-toggle hidden role="group" aria-label="Select frame"><button type="button" class="filter-pill" data-frame-button="source" aria-pressed="true"><kbd>1</kbd> {c.sourceLabel}</button><button type="button" class="filter-pill" data-frame-button="encode" aria-pressed="false"><kbd>2</kbd> {c.encodeLabel}</button></div><button type="button" class="native-button" data-native-button aria-pressed="false">1:1 Native Pixel</button><span class="pixel-status mono" data-pixel-status>FIT TO VIEW</span></div>
-  <figcaption>{c.note && <p>{c.note}</p>}<span class="keyboard-hint mono"><kbd>1</kbd> / <kbd>2</kbd> toggle · <kbd>←</kbd> / <kbd>→</kbd> switch · native view scrolls at original image size</span></figcaption>
+  <figcaption>{c.note && <p>{c.note}</p>}<span class="keyboard-hint mono"><kbd>1</kbd> / <kbd>2</kbd> toggle · <kbd>←</kbd> / <kbd>→</kbd> switch · <kbd>Space</kbd> or click the image in Toggle mode · native view scrolls at original image size</span></figcaption>
 </figure>
 <script>
   document.querySelectorAll<HTMLElement>('[data-frame-compare]').forEach((root) => {
@@ -27,6 +26,8 @@ const { comparison: c, id } = Astro.props;
       root.querySelector<HTMLElement>('[data-frame-toggle]')!.hidden = mode !== 'toggle';
     };
     const setFrame = (frame: string) => { setMode('toggle'); root.dataset.frame = frame; root.querySelectorAll<HTMLButtonElement>('[data-frame-button]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.frameButton === frame))); };
+    const toggleFrame = () => setFrame(root.dataset.frame === 'source' ? 'encode' : 'source');
+    stage.addEventListener('click', (event) => { if (root.dataset.mode === 'toggle' && !(event.target as HTMLElement).closest('button')) toggleFrame(); });
     source.addEventListener('load', updateSize); if (source.complete) updateSize();
     range.addEventListener('input', () => split(Number(range.value)));
     root.querySelectorAll<HTMLButtonElement>('[data-compare-mode]').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.compareMode!)));
@@ -37,6 +38,7 @@ const { comparison: c, id } = Astro.props;
     handle.addEventListener('pointerup', (event) => { if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId); });
     root.addEventListener('keydown', (event) => {
       if ((event.target as HTMLElement).matches('input') && root.dataset.mode === 'split') return;
+      if (event.key === ' ' && !(event.target as HTMLElement).matches('button, input')) { event.preventDefault(); toggleFrame(); }
       if (['1', '2', 'ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); setFrame(event.key === '1' || event.key === 'ArrowLeft' ? 'source' : 'encode'); }
     });
   });
@@ -56,8 +58,8 @@ const { comparison: c, id } = Astro.props;
   .image-label { position: absolute; top: 14px; border: 1px solid #ffffff30; border-radius: 3px; padding: 3px 8px; color: #e8edf6; background: #000000b3; font-size: .62rem; pointer-events: none; }
   .source-label { left: 14px; } .encode-label { right: 14px; }
   .split-handle { position: absolute; top: 0; bottom: 0; left: var(--split); width: 22px; transform: translateX(-50%); background: transparent; padding: 0; cursor: ew-resize; touch-action: none; }
-  .split-handle::before { content: ''; position: absolute; inset: 0; width: 1px; background: #00e5ff; margin-inline: auto; box-shadow: 0 0 0 1px #00000060; }
-  .split-handle span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 32px; height: 36px; border-radius: 5px; display: grid; place-items: center; color: #000; background: #00e5ff; font-size: 1.25rem; font-weight: 600; letter-spacing: 2px; }
+  .split-handle::before { content: ''; position: absolute; inset: 0; width: 1px; background: var(--media-accent); margin-inline: auto; box-shadow: 0 0 0 1px #00000060; }
+  .split-handle span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 32px; height: 36px; border-radius: 5px; display: grid; place-items: center; color: #000; background: var(--media-accent); font-size: 1.25rem; font-weight: 600; letter-spacing: 2px; }
   .compare-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
   .split-control { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 120px; }
   input[type='range'] { padding: 0; height: 18px; border: 0; accent-color: var(--cyan); background: none; }

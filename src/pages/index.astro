@@ -2,45 +2,81 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import AnimeCard from '../components/AnimeCard.astro';
 import GuideCard from '../components/GuideCard.astro';
-import ReleasesTable from '../components/ReleasesTable.astro';
+import ReleaseCard from '../components/ReleaseCard.astro';
+import ReleaseSpotlight from '../components/ReleaseSpotlight.astro';
 import Icon from '../components/Icon.astro';
 import { getArchive, formatDate, pathFor } from '../lib/archive';
 const archive = await getArchive();
 const featured = archive.anime.filter((entry) => entry.data.featured);
+const shelf = (featured.length ? featured : archive.anime).slice(0, 4);
 const active = archive.progress.find((entry) => entry.data.stage !== 'Completed');
-const activeAnime = active?.data.relatedAnime && archive.anime.find((entry) => entry.id === active.data.relatedAnime?.id);
+const activeAnime = active?.data.relatedAnime ? archive.anime.find((entry) => entry.id === active.data.relatedAnime?.id) : undefined;
+const stageLabels: Record<string, string> = { Filtering: 'Preparing the source', Encoding: 'Encoding', QC: 'Checking the frames', Muxing: 'Assembling the release', Completed: 'Complete' };
+const comparisonCount = [...archive.episodes, ...archive.guides].reduce((count, entry) => count + (entry.data.comparisons?.length ?? 0), 0);
+const directory = [
+  { href: '/anime/', title: 'The archive', description: 'Anime & manga', count: archive.anime.length },
+  { href: '/releases/', title: 'Releases', description: 'Episodes & batches', count: archive.episodes.length },
+  { href: '/guides/', title: 'Field notes', description: 'Guides & workflows', count: archive.guides.length },
+  { href: '/comparisons/', title: 'Frame comparisons', description: 'Source meets encode', count: comparisonCount },
+];
 ---
 <BaseLayout title="Home">
-  <section class="hero"><div class="hero-copy"><span class="eyebrow">Independent encodes. Open field notes.</span><h1>Care in <span>every frame.</span></h1><p>An anime archive for the details that matter. Thoughtful encodes, transparent release notes, and a closer look at the pixels.</p><div class="hero-actions"><a href="/releases/" class="button button-primary">Browse releases <Icon name="arrow" size={15}/></a><a href="/guides/" class="text-link"><Icon name="book" size={15}/> Read the field notes</a></div><div class="hero-stats mono"><span><strong>{archive.anime.length.toString().padStart(2, '0')}</strong> SERIES</span><span><strong>{archive.episodes.length.toString().padStart(2, '0')}</strong> RELEASES</span><span><strong>{archive.guides.length.toString().padStart(2, '0')}</strong> GUIDES</span><span class="archive-tag">[Yuuki]</span></div></div><div class="hero-art"><img src="/images/observatory.svg" width="960" height="560" alt="Illustrated observatory under a starry teal night sky" fetchpriority="high"/><span class="art-caption mono"><i></i> THE FRAME IS THE REFERENCE <span>01 / 01</span></span></div></section>
-  {active && <div class="status-strip panel"><span class="status-live mono"><i></i> ON THE WORKBENCH</span><span>{activeAnime ? <a href={pathFor('anime', activeAnime.id)}>{activeAnime.data.title}</a> : active.data.title}</span><span class="badge badge-violet">{active.data.stage}</span><span class="status-detail">{active.data.title}</span><a href="/about/#progress" class="text-link">Activity log <Icon name="arrow" size={13}/></a></div>}
-  <section class="home-section"><div class="section-heading"><h2><Icon name="layers"/> In the archive <span class="count">{featured.length}</span></h2><a href="/anime/" class="text-link">View archive <Icon name="arrow" size={14}/></a></div><div class="featured-grid">{featured.map((entry) => <AnimeCard entry={entry} compact/>)}</div>{featured.length === 0 && <p class="empty-state">Featured series will appear here.</p>}</section>
-  <section class="home-section"><div class="section-heading"><h2><Icon name="download"/> Latest releases <span class="count">{archive.episodes.length}</span></h2><a href="/releases/" class="text-link">All releases <Icon name="arrow" size={14}/></a></div><ReleasesTable episodes={archive.episodes.slice(0, 6)} anime={archive.anime}/></section>
-  <section class="home-section"><div class="section-heading"><h2><Icon name="book"/> From the field notes</h2><a href="/guides/" class="text-link">Guide library <Icon name="arrow" size={14}/></a></div><div class="guides-grid">{archive.guides.slice(0, 3).map((entry, index) => <GuideCard entry={entry} index={index}/>)}</div></section>
-  <div class="archive-note mono"><span>SAMPLE ARCHIVE · LOCAL SVG ART & ILLUSTRATIVE METRICS</span><span>LAST RELEASE {archive.episodes[0] ? formatDate(archive.episodes[0].data.releaseDate).toUpperCase() : '—'}</span></div>
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">An independent anime & manga archive</span>
+      <h1>For the love<br/>of <em>the frame.</em></h1>
+      <p>Releases, experiments, and notes from the workbench. A little space for the stories we love, and the details worth keeping.</p>
+      <div class="hero-actions"><a href="/anime/" class="button button-primary">Explore the archive <Icon name="arrow" size={17}/></a><a href="/releases/" class="text-link">Latest releases <Icon name="arrow" size={16}/></a></div>
+      <div class="hero-signoff"><span class="mono">[ Yuuki ]</span><span>Collected with care. Shared with you.</span></div>
+    </div>
+    <ReleaseSpotlight releases={archive.episodes} series={archive.anime} fallback={shelf[0]} />
+  </section>
+  <nav class="directory" aria-label="Explore Yuuki">{directory.map((item) => <a href={item.href}><div><span class="directory-count mono">{String(item.count).padStart(2, '0')}</span><strong>{item.title}</strong><span class="directory-description">{item.description}</span></div><Icon name="arrow" size={17}/></a>)}</nav>
+  <div class="editorial-grid">
+    <section><div class="section-heading"><h2><span class="section-number">01</span> Latest releases</h2><a href="/releases/" class="text-link">All releases <Icon name="arrow" size={14}/></a></div><div class="recent-releases">{archive.episodes.slice(0, 4).map((entry) => <ReleaseCard entry={entry} series={archive.anime.find((series) => series.id === entry.data.anime.id)}/>)}</div>{archive.episodes.length === 0 && <p class="empty-state">The first release will appear here when it is published.</p>}</section>
+    <aside class="home-sidebar"><section class="workbench panel"><div class="workbench-top"><span class="eyebrow">On the workbench</span><Icon name="activity" size={19}/></div>{active ? <><span class="stage-label">Current stage</span><h2>{stageLabels[active.data.stage] ?? active.data.stage}<span> /</span></h2><p>{active.data.title}</p>{activeAnime && <a href={pathFor('anime', activeAnime.id)} class="workbench-series">{activeAnime.data.title} <Icon name="arrow" size={14}/></a>}<time class="mono workbench-date" datetime={active.data.date.toISOString()}>Updated {formatDate(active.data.date)}</time></> : <><h2>Between releases<span> /</span></h2><p>The activity log keeps the notes from the process.</p></>}<a href="/about/#progress" class="text-link workbench-link">Follow the work <Icon name="arrow" size={14}/></a></section><div class="personal-note"><span class="mono">A NOTE FROM THE ARCHIVE</span><p>The settings are a starting point.<br/><em>The source is the reference.</em></p><a href="/about/" class="text-link">The approach <Icon name="arrow" size={14}/></a></div></aside>
+  </div>
+  <section class="home-section"><div class="section-heading"><h2><span class="section-number">02</span> From the collection</h2><a href="/anime/" class="text-link">View archive <Icon name="arrow" size={14}/></a></div><div class="featured-grid">{shelf.map((entry) => <AnimeCard entry={entry} compact/>)}</div>{shelf.length === 0 && <p class="empty-state">Published anime and manga will appear here.</p>}</section>
+  <section class="home-section"><div class="section-heading"><h2><span class="section-number">03</span> Notes worth sharing</h2><a href="/guides/" class="text-link">All guides <Icon name="arrow" size={14}/></a></div><div class="guides-grid">{archive.guides.slice(0, 3).map((entry, index) => <GuideCard entry={entry} index={index}/>)}</div>{archive.guides.length === 0 && <p class="empty-state">Practical guides will appear here as they are published.</p>}</section>
+  <div class="archive-note"><span>Open a release for its notes, available file details, and links.</span>{archive.episodes[0] && <span class="mono">LAST RELEASE / {formatDate(archive.episodes[0].data.releaseDate)}</span>}</div>
 </BaseLayout>
 <style>
-  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; padding: 44px 0 32px; }
-  .hero-copy { padding-block: 12px; }
-  h1 { margin-top: 18px; font-size: clamp(2.8rem, 4.5vw, 5rem); line-height: 1.06; letter-spacing: -.06em; }
-  h1 span { display: block; color: var(--cyan); }
-  .hero-copy > p { color: var(--muted); font-size: .97rem; line-height: 1.8; max-width: 470px; margin-top: 21px; }
+  .hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 60px; align-items: center; padding: 46px 0 38px; }
+  .hero-copy { padding: 12px 0; }
+  h1 { margin-top: 22px; font-size: clamp(3.2rem, 5.7vw, 5.8rem); line-height: 1.03; letter-spacing: -.065em; font-weight: 500; }
+  h1 em { font-family: var(--font-display); font-weight: 400; color: var(--accent); letter-spacing: -.055em; }
+  .hero-copy > p { color: var(--muted); font-size: .96rem; line-height: 1.85; max-width: 420px; margin-top: 23px; }
   .hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; margin-top: 25px; }
-  .hero-stats { display: flex; gap: 30px; align-items: center; border-top: 1px solid var(--border); margin-top: 32px; padding-top: 19px; color: var(--subtle); font-size: .6rem; }
-  .hero-stats strong { color: var(--text); font-size: 1.16rem; font-weight: 500; margin-right: 6px; }
-  .archive-tag { margin-left: auto; color: var(--cyan); font-size: .85rem; }
-  .hero-art { position: relative; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #080a0e; }
-  .hero-art img { width: 100%; height: auto; }
-  .art-caption { display: flex; align-items: center; gap: 8px; position: absolute; bottom: 0; inset-inline: 0; padding: 12px 16px; font-size: .56rem; color: #94a2b8; background: #080a0ef0; border-top: 1px solid #1b202c; letter-spacing: .07em; }
-  .art-caption i { width: 5px; height: 5px; background: #00e5ff; border-radius: 50%; }
-  .art-caption span { margin-left: auto; }
-  .status-strip { display: flex; align-items: center; gap: 15px; padding: 12px 16px; font-size: .78rem; }
-  .status-live { display: flex; align-items: center; gap: 8px; color: var(--green); font-size: .58rem; letter-spacing: .05em; }
-  .status-live i { height: 6px; width: 6px; background: var(--green); border-radius: 50%; }
-  .status-strip > a { margin-left: auto; font-size: .7rem; }
-  .status-detail { font-size: .73rem; color: var(--subtle); }
-  .home-section { margin-top: 32px; }
-  .featured-grid, .guides-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .archive-note { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 28px; font-size: .55rem; color: var(--subtle); letter-spacing: .06em; }
-  @media (max-width: 1050px) { .hero { gap: 28px; } .status-detail { display: none; } .hero-stats { gap: 18px; } }
-  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 25px; padding-top: 26px; } .hero-copy { padding: 0; } .hero-art { max-height: 280px; } .hero-art img { height: 280px; object-fit: cover; } .featured-grid, .guides-grid { grid-template-columns: 1fr; } .status-strip { flex-wrap: wrap; gap: 10px; } .status-live { flex-basis: 100%; } .hero-stats { gap: 16px; } .hero-stats strong { font-size: 1rem; } .archive-tag { font-size: .7rem; } }
+  .hero-signoff { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-top: 31px; font-size: .73rem; color: var(--subtle); }
+  .hero-signoff .mono { color: var(--accent); font-size: .7rem; }
+  .directory { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--border-strong); }
+  .directory a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 25px; border-right: 1px solid var(--border); }
+  .directory a:first-child { padding-left: 0; } .directory a:last-child { padding-right: 0; border-right: 0; }
+  .directory-count { color: var(--accent); font-size: .64rem; }
+  .directory strong { display: block; font-size: .91rem; font-weight: 500; margin-top: 4px; }
+  .directory-description { display: block; color: var(--subtle); font-size: .73rem; margin-top: 3px; }
+  .directory :global(svg) { color: var(--subtle); flex-shrink: 0; }
+  .directory a:hover strong, .directory a:hover :global(svg) { color: var(--accent); }
+  .editorial-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 48px; margin-top: 36px; }
+  .home-sidebar { min-width: 0; }
+  .workbench { padding: 23px 24px; }
+  .workbench-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--accent); margin-bottom: 22px; }
+  .stage-label { color: var(--subtle); font-size: .7rem; }
+  .workbench h2 { font: 400 1.65rem/1.35 var(--font-display); margin-top: 6px; }
+  .workbench h2 span { color: var(--accent); font-style: italic; }
+  .workbench p { color: var(--muted); font-size: .85rem; line-height: 1.7; margin-top: 11px; }
+  .workbench-series { display: inline-flex; gap: 8px; align-items: center; font-size: .76rem; color: var(--accent); margin-top: 12px; }
+  .workbench-date { display: block; font-size: .6rem; color: var(--subtle); margin-top: 20px; }
+  .workbench-link { display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 13px; margin-top: 18px; }
+  .personal-note { padding: 23px 0 0; }
+  .personal-note > span { font-size: .58rem; letter-spacing: .1em; color: var(--subtle); }
+  .personal-note p { font: 400 1.2rem/1.65 var(--font-display); color: var(--muted); margin-top: 10px; }
+  .personal-note em { color: var(--text); } .personal-note .text-link { margin-top: 10px; }
+  .home-section { margin-top: 42px; }
+  .featured-grid, .guides-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .archive-note { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--border); padding-top: 20px; margin-top: 30px; font-size: .74rem; color: var(--subtle); }
+  .archive-note .mono { font-size: .6rem; }
+  @media (max-width: 1100px) { .hero { gap: 32px; } .editorial-grid { gap: 30px; } .directory a { padding-inline: 18px; } }
+  @media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 27px; padding: 28px 0; } .hero-copy { padding: 0; } h1 { font-size: clamp(3rem, 11.5vw, 4.8rem); margin-top: 17px; } .hero-copy > p { margin-top: 17px; font-size: .9rem; } .hero-actions { gap: 18px; margin-top: 21px; } .hero-signoff { margin-top: 21px; gap: 10px; font-size: .66rem; } .directory { grid-template-columns: repeat(2, minmax(0, 1fr)); } .directory a { padding: 16px 14px; } .directory a:nth-child(2) { padding-right: 0; border-right: 0; } .directory a:nth-child(3) { padding-left: 0; } .directory a:nth-child(-n+2) { border-bottom: 1px solid var(--border); } .directory strong { font-size: .85rem; } .directory-description { font-size: .67rem; } .editorial-grid { grid-template-columns: 1fr; gap: 26px; margin-top: 28px; } .personal-note { display: none; } .featured-grid, .guides-grid { grid-template-columns: 1fr; gap: 15px; } .home-section { margin-top: 30px; } .workbench { padding: 21px; } }
+  @media (max-width: 360px) { .hero-actions { gap: 10px; } .hero-actions .button { padding-inline: 13px; } .directory a { gap: 8px; padding-inline: 12px; } .directory-description { font-size: .61rem; } }
 </style>

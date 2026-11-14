@@ -1,0 +1,26 @@
+---
+import Icon from './Icon.astro';
+interface Props { count: number; }
+const { count } = Astro.props;
+---
+<div class="spotlight-controls" data-spotlight-controls hidden>
+  <span class="spotlight-position mono" data-spotlight-position aria-live="off">01 / {String(count).padStart(2, '0')}</span>
+  <span class="playback-label mono" data-spotlight-mode>Auto</span>
+  <button type="button" class="spotlight-play" data-spotlight-play aria-label="Pause release slideshow"><span data-pause-icon><Icon name="pause" size={14}/></span><span data-play-icon hidden><Icon name="play" size={14}/></span><span data-play-label>Pause</span></button>
+  <div class="slide-navigation"><button type="button" data-spotlight-previous aria-label="Previous release"><Icon name="previous" size={17}/></button><button type="button" data-spotlight-next aria-label="Next release"><Icon name="arrow" size={17}/></button></div>
+  <p class="sr-only" data-spotlight-announcement role="status"></p>
+</div>
+<script>
+  import '../scripts/spotlight';
+</script>
+<style>
+  .spotlight-controls { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--border); padding: 5px 4px 0; }
+  .spotlight-position { color: var(--text); font-size: .63rem; font-variant-numeric: tabular-nums; }
+  .playback-label { color: var(--subtle); font-size: .56rem; }
+  button { display: flex; align-items: center; justify-content: center; min-width: 44px; height: 44px; background: transparent; color: var(--muted); border-radius: 3px; }
+  button:hover { background: var(--surface-hover); color: var(--accent); }
+  button:disabled { cursor: default; }
+  .spotlight-play { margin-left: auto; gap: 7px; padding: 0 8px; font-size: .66rem; }
+  .slide-navigation { display: flex; gap: 2px; }
+  @media (max-width: 360px) { .spotlight-controls { gap: 7px; } .playback-label { display: none; } }
+</style>

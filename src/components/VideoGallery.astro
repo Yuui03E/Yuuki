@@ -1,0 +1,13 @@
+---
+import type { GuideVideo } from '../lib/content-fields';
+interface Props { videos: GuideVideo[]; }
+const { videos } = Astro.props;
+---
+<div class="video-gallery">{videos.map((video) => <figure class="video-item panel"><h3>{video.title}</h3><video controls playsinline preload="none" src={video.src} poster={video.poster} aria-label={video.title}>Your browser cannot play this video. <a href={video.src}>Open the video file</a>.</video>{video.caption && <figcaption>{video.caption}</figcaption>}</figure>)}</div>
+<style>
+  .video-gallery { display: grid; gap: 20px; }
+  .video-item { padding: 16px; }
+  h3 { margin: 0 0 12px; font-size: 1rem; }
+  video { display: block; width: 100%; max-height: 70vh; background: #000; border-radius: 4px; }
+  figcaption { color: var(--muted); font-size: .8rem; line-height: 1.6; margin-top: 12px; }
+</style>

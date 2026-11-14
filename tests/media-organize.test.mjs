@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { parse } from 'yaml';
+import { organizeMedia } from '../scripts/organize-media.mjs';
+import { digest } from '../scripts/media-files.mjs';
+
+test('migration verifies before changing links, retains originals and can be safely repeated', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'yuuki-organize-')); t.after(() => rm(root, { recursive: true, force: true }));
+  const bytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nOIAAAAASUVORK5CYII=', 'base64');
+  const sha256 = digest(bytes);
+  const origin = 'https://media.unit-test.workers.dev'; const key = `media/adult/${sha256}.png`;
+  await mkdir(path.join(root, 'media-library/objects'), { recursive: true }); await mkdir(path.join(root, 'src/content/anime'), { recursive: true });
+  await writeFile(path.join(root, 'r2.local.json'), JSON.stringify({ accountId: 'a'.repeat(32), bucketName: 'yuuki-media', workerName: 'yuuki-media', mediaOrigin: origin, publicOrigin: 'https://yuuki03e.pages.dev', storageBudgetBytes: 9_000_000_000 }));
+  await writeFile(path.join(root, `media-library/objects/${sha256}.png`), bytes);
+  await writeFile(path.join(root, 'media-library/catalog.json'), JSON.stringify({ version: 1, assets: [{ key, url: `${origin}/${key}`, sha256, audience: 'adult', size: bytes.length, contentType: 'image/png', filename: 'original.png', verified: true }] }));
+  const file = path.join(root, 'src/content/anime/my-post.mdx');
+  const source = `---\ntitle: My post\nadult: true\ncoverImage: ${origin}/${key}\n---\n\nPreserved notes.\n`; await writeFile(file, source);
+  const objects = new Map([[key, bytes]]); let corrupt = true;
+  const tool = async (_root, _name, args) => { objects.set(args[3].split('/').slice(1).join('/'), await readFile(args[args.indexOf('--file') + 1])); };
+  const fetcher = async (url) => {
+    if (url.endsWith('/health')) return Response.json({ service: 'yuuki-media', version: 1, bucketName: 'yuuki-media' });
+    const key = new URL(url).pathname.slice(1); let bytes = objects.get(key);
+    if (bytes && corrupt) bytes = Buffer.from('corrupted');
+    return new Response(bytes || 'missing', { status: bytes ? 200 : 404, headers: { 'X-Yuuki-Media': '1' } });
+  };
+  const plan = await organizeMedia({ root }); assert.equal(plan.posts, 1); assert.equal(plan.mediaGroups[0].id, 'my-post');
+  await assert.rejects(organizeMedia({ root, apply: true, tool, fetcher }), { status: 409 });
+  assert.equal(await readFile(file, 'utf8'), source);
+  corrupt = false; await organizeMedia({ root, apply: true, tool, fetcher });
+  const updated = await readFile(file, 'utf8');
+  assert.ok(updated.includes(`/media/adult/anime/my-post/${sha256}.png`)); assert.ok(updated.includes('Preserved notes.'));
+  const yaml = (text) => parse(/^---\n([\s\S]*?)\n---/.exec(text)[1]);
+  assert.deepEqual({ ...yaml(updated), coverImage: yaml(source).coverImage }, yaml(source));
+  assert.deepEqual(await readFile(path.join(root, `media-library/objects/${sha256}.png`)), bytes); assert.deepEqual(objects.get(key), bytes);
+  assert.equal(await readFile(path.join(root, `media-library/posts/anime/my-post/revisions/${digest(Buffer.from(source))}.mdx`), 'utf8'), source);
+  const repeated = await organizeMedia({ root, apply: true, tool, fetcher }); assert.equal(repeated.unassigned, 0); assert.equal(repeated.mediaGroups.length, 0);
+  assert.equal(JSON.parse(await readFile(path.join(root, 'media-library/catalog.json'))).assets.length, 2);
+});

@@ -7,7 +7,7 @@ import { compile } from '@mdx-js/mdx';
 import { studioSchemas } from '../src/lib/studio-schema.ts';
 import { episodeFields } from '../src/lib/content-fields.ts';
 import { z } from 'astro/zod';
-import { slugify, isLocalRequest, saveContent } from '../scripts/studio-server.mjs';
+import { slugify, isLocalRequest, saveContent, invalidateContentImports } from '../scripts/studio-server.mjs';
 
 const data = { title: 'Studio test series', status: 'Planned', sourceType: 'BD', coverImage: '/images/frieren-cover.svg', synopsis: 'Local validation fixture.' };
 const guide = { title: 'Studio test guide', description: 'A test guide.', category: 'Encoding', difficulty: 'Beginner', updatedDate: '2026-11-13' };
@@ -27,6 +27,25 @@ test('local origin, host, and remote address must agree', () => {
   assert.equal(isLocalRequest({ ...request, headers: { ...request.headers, origin: undefined } }), false);
   assert.equal(isLocalRequest({ ...request, socket: { remoteAddress: '192.168.1.5' } }), false);
   assert.equal(isLocalRequest({ ...request, headers: { ...request.headers, 'sec-fetch-site': 'cross-site' } }), false);
+});
+test('content imports clear both server and evaluated module caches after a studio save', () => {
+  const cleared = [];
+  const id = '\0astro:content-module-imports';
+  const module = {}; const evaluated = {};
+  const environment = {
+    moduleGraph: { getModulesByFile: (_file) => new Set(), getModuleById: (key) => key === id ? module : undefined, invalidateModule: (entry) => { assert.equal(entry, module); cleared.push('graph'); } },
+    runner: { evaluatedModules: { getModulesByFile: (_file) => new Set(), getModuleById: (key) => key === id ? evaluated : undefined, invalidateModule: (entry) => { assert.equal(entry, evaluated); cleared.push('runner'); } } },
+    hot: { send: (event) => { assert.equal(event, 'astro:content-changed'); cleared.push('routes'); } },
+  };
+  invalidateContentImports({ environments: { ssr: environment } }, '/project');
+  assert.deepEqual(cleared, ['graph', 'runner', 'routes']);
+  cleared.length = 0;
+  environment.moduleGraph.getModuleById = () => undefined;
+  environment.moduleGraph.getModulesByFile = (file) => { assert.ok(file.endsWith('/.astro/content-modules.mjs')); return new Set([module]); };
+  environment.runner.evaluatedModules.getModuleById = () => undefined;
+  environment.runner.evaluatedModules.getModulesByFile = (file) => { assert.ok(file.endsWith('/.astro/content-modules.mjs')); return new Set([evaluated]); };
+  invalidateContentImports({ environments: { ssr: environment } }, '/project');
+  assert.deepEqual(cleared, ['graph', 'runner', 'routes']);
 });
 test('safe names remove traversal and handle Windows device names', () => {
   assert.equal(slugify('../../My New Series!'), 'my-new-series');
@@ -78,4 +97,14 @@ test('collection directory links cannot redirect publishing writes', async (t) =
   await symlink(outside, path.join(root, 'src/content/guides'), process.platform === 'win32' ? 'junction' : 'dir');
   await assert.rejects(save(root, 'guide', { data: guide, body: 'Safe body' }), { status: 422 });
   assert.deepEqual(await readdir(outside), []);
+});
+test('adult parent and media infer classification; unsafe adult body cannot be saved', async (t) => {
+  const root = await fixture(t);
+  await writeFile(path.join(root, 'src/content/anime/adult-series.mdx'), '---\ntitle: Adult\ntags: [Hentai]\n---\n');
+  const episode = { anime: 'adult-series', episodeNumber: 1, releaseDate: '2026-11-14' };
+  const saved = await save(root, 'episode', { data: episode }); assert.equal(saved.adult, true);
+  assert.match(await readFile(path.join(root, saved.file), 'utf8'), /adult: true/);
+  await assert.rejects(save(root, 'episode', { data: { ...episode, episodeNumber: 2 }, body: '![image](https://example.com/x)' }), { status: 422 });
+  await assert.rejects(save(root, 'guide', { data: guide, body: `![image](https://media.test/media/adult/${'a'.repeat(64)}.webp)` }), { status: 422 });
+  const inferred = await save(root, 'anime', { data: { ...data, coverImage: `https://media.test/media/adult/${'a'.repeat(64)}.webp` } }); assert.equal(inferred.adult, true);
 });

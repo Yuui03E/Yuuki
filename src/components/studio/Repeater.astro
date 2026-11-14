@@ -1,0 +1,34 @@
+---
+import Icon from '../Icon.astro';
+import type { RepeaterGroup } from '../../lib/studio-fields';
+interface Props { group: RepeaterGroup; }
+const { group } = Astro.props;
+---
+<section class="repeater-section" data-repeater={group.name} data-values={group.mode}>
+  <div class="repeater-heading"><h3>{group.title}</h3><button type="button" class="button add-row" data-add-row><Icon name="plus" size={13}/> Add {group.singular}</button></div>
+  {group.note && <p>{group.note}</p>}
+  <div data-rows></div>
+  <template><div class="repeat-row"><div class="repeat-fields">
+    {group.fields.map((field) => <label class:list={['repeat-field', { 'row-check': field.type === 'checkbox', 'repeat-wide': field.type === 'textarea' }]}><span>{field.label}</span>
+      {field.type === 'textarea' ? <textarea data-key={field.key} rows={field.key === 'command' ? 5 : 2} placeholder={field.placeholder} required={field.required} spellcheck={field.key === 'command' ? false : undefined}>{field.value}</textarea>
+        : field.type === 'select' ? <select data-key={field.key} required={field.required}>{field.options?.map((option) => <option selected={option === field.value} value={option}>{option}</option>)}</select>
+        : <input data-key={field.key} type={field.type ?? 'text'} value={field.value} placeholder={field.placeholder} required={field.required} min={field.type === 'number' ? 0 : undefined}/>}
+    </label>)}
+  </div><button type="button" class="icon-button remove-row" data-remove-row aria-label={`Remove ${group.singular}`}><Icon name="close" size={14}/></button></div></template>
+</section>
+<style>
+  .repeater-section { padding-top: 24px; border-top: 1px solid var(--border); margin-top: 24px; }
+  .repeater-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .repeater-heading h3 { font-size: .95rem; }
+  .add-row { padding: 7px 10px; font-size: .73rem; }
+  p { color: var(--muted); font-size: .76rem; line-height: 1.7; margin-bottom: 14px; }
+  :global(.repeat-row) { position: relative; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 45px 16px 16px; margin-top: 12px; }
+  :global(.repeat-fields) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  :global(.repeat-field) { display: flex; flex-direction: column; gap: 7px; min-width: 0; font-size: .76rem; color: var(--muted); }
+  :global(.repeat-wide) { grid-column: 1 / -1; }
+  :global(.repeat-field [data-key='command']) { font-family: var(--font-mono); font-size: .8rem; }
+  :global(.row-check) { flex-direction: row; align-items: center; }
+  :global(.row-check input) { width: auto; }
+  :global(.remove-row) { position: absolute; right: 5px; top: 12px; }
+  @media (max-width: 760px) { :global(.repeat-fields) { grid-template-columns: 1fr; } .repeater-heading { flex-wrap: wrap; } }
+</style>

@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import FrameCompare from '../../components/FrameCompare.astro';
+import MetricChart from '../../components/MetricChart.astro';
+import { getArchive, pathFor, releaseTitle, formatDate } from '../../lib/archive';
+const archive = await getArchive({ audience: 'adult' });
+const { anime, episodes, guides, benchmarks, progress, seriesLookup } = archive;
+const records = [
+  ...anime.map((entry) => ({ title: entry.data.title, type: entry.data.mediaType, url: pathFor('anime', entry.id) })),
+  ...episodes.map((entry) => ({ title: releaseTitle(entry, seriesLookup.get(entry.data.anime.id)), type: 'Release', url: pathFor('releases', entry.id) })),
+  ...guides.map((entry) => ({ title: entry.data.title, type: 'Guide', url: pathFor('guides', entry.id) })),
+];
+const pairs = episodes.flatMap((entry) => (entry.data.comparisons ?? []).map((comparison, index) => ({ comparison, id: `${entry.id.replace(/\//g, '-')}-${index}` })));
+---
+<BaseLayout title="Adult area" adult>
+  <div class="page-heading"><span class="eyebrow">Separate adult archive</span><h1>Adult releases and comparisons</h1><p>Adult records stay out of the general archive and its search.</p></div>
+  <label class="adult-search">Filter this area<input type="search" data-adult-search placeholder="Search titles, comparisons, or updates"/></label>
+  <section><h2>Archive and guides</h2><ul class="adult-records">{records.map((record) => <li data-adult-item><a href={record.url}>{record.title}</a><span class="badge">{record.type}</span></li>)}</ul>{!records.length && <p class="empty-state">No published adult records yet.</p>}</section>
+  {pairs.length > 0 && <section><h2>Frame comparisons</h2><div class="adult-pairs">{pairs.map(({ comparison, id }) => <div data-adult-item><FrameCompare comparison={comparison} id={id}/></div>)}</div></section>}
+  {benchmarks.length > 0 && <section><h2>Benchmarks</h2>{benchmarks.map((benchmark) => <div data-adult-item><MetricChart benchmark={benchmark}/></div>)}</section>}
+  {progress.length > 0 && <section><h2>Activity</h2><ul class="adult-records">{progress.map((entry) => <li data-adult-item><span>{entry.data.title}</span><time datetime={entry.data.date.toISOString()}>{formatDate(entry.data.date)}</time></li>)}</ul></section>}
+</BaseLayout>
+<style>
+  .adult-search { display: grid; gap: 8px; max-width: 600px; color: var(--muted); font-size: .85rem; margin-bottom: 28px; }
+  section + section { margin-top: 32px; } h2 { margin-bottom: 16px; }
+  .adult-records { list-style: none; padding: 0; } li { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  a:hover { color: var(--cyan); } time { color: var(--muted); font-size: .8rem; }
+  .adult-pairs { display: grid; gap: 20px; } [hidden] { display: none !important; }
+</style>

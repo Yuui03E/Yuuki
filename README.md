@@ -34,6 +34,9 @@ npm run dev
 | `public/` | Favicon and small SVG sample illustrations |
 | `examples/content/` | Safe examples for new checkouts and verification |
 | `scripts/` | Local writing, building, publishing, and maintenance tools |
+| `services/media-worker/` | Read-only R2 media delivery, deployed separately from Pages |
+| `media-library/` | Ignored local originals and upload catalog |
+| `local-backups/` | Current local handoff; completed reviews are archived in `Yuuki-backups/` beside the project |
 | `tests/` | Validation, publishing, and browser checks |
 | `docs/` | Development, publishing, and image instructions |
 | Root configuration files | Runtime, dependencies, Astro, search, and verification settings |
@@ -54,7 +57,7 @@ This removes only build output, generated Astro state, project npm cache, test r
 
 GitHub and this PC share the same reusable code, configuration, documentation, tests, and safe examples through Git. Your real posts, drafts, image addresses, original media, credentials, installed dependencies, and generated output remain local by design.
 
-Keep an independent backup of `src/content/`, original media, and image-address mappings. Historical snapshots and the old completion report from the cleanup are stored outside this project in the sibling `Yuuki-backups/` folder. That folder is on the same drive and is not an independent backup.
+Keep an independent backup of `src/content/`, original media, and image-address mappings. Historical snapshots, completed visual reviews, older handoffs, and the old completion report are stored outside this project in the sibling `Yuuki-backups/` folder. That folder is on the same drive and is not an independent backup.
 
 ## Checks and next steps
 
@@ -63,7 +66,10 @@ npx astro check && npm run build
 ~~~
 
 - [Development and Git synchronization](docs/DEVELOPMENT.md)
+- [Writing guides, draft previews and optional media](docs/GUIDES.md)
+- [Website design and content organization](docs/DESIGN.md)
 - [Publishing to the existing Cloudflare Pages site](docs/PUBLISHING.md)
+- [R2 account setup, uploads, backups, and costs](docs/R2_SETUP.md)
 - [Images and local originals](docs/IMAGES.md)
 
-The next hosting step is configuring direct local publication to the existing Pages project. Adult classification, separate adult browsing/search, and deliberate explicit-image loading remain unfinished and are required before explicit-image publication.
+R2 is connected on this PC. The studio organizes verified uploads by post, backs up sources privately, and remembers adult-content confirmation in the visitor's browser. Guides have a practical reader layout, optional screenshots/videos/comparisons, local draft previews and revision-aware editing. The website shares an editorial OLED-black theme, content-driven homepage, responsive release list, and organized series and guide readers. Direct Pages publication is separate.

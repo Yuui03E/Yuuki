@@ -13,9 +13,15 @@ test('all public pages load with no browser errors or broken local images', asyn
   expect(errors).toEqual([]);
 });
 test('release pills, archive media types, and guide categories combine with search', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/releases/'); await page.getByRole('button', { name: 'Batch', exact: true }).click();
   await expect(page.locator('[data-release-row]:visible')).toHaveCount(1);
+  await expect(page.locator('[data-release-row]:visible .date time')).toBeVisible();
   await page.getByRole('searchbox', { name: 'Search releases' }).fill('missing'); await expect(page.locator('[data-release-empty]')).toBeVisible();
+  await page.getByRole('searchbox', { name: 'Search releases' }).fill('');
+  await page.locator('[data-release-row]:visible').getByRole('link', { name: /^Details for / }).click();
+  await expect(page).toHaveURL(/releases\/frieren-01-02-batch/);
+  await expect(page.getByRole('heading', { name: 'Download links' })).toBeVisible();
   await page.goto('/anime/'); await page.getByRole('button', { name: 'Manga', exact: true }).click(); await expect(page.locator('[data-archive-card]:visible')).toHaveCount(1); await expect(page.locator('[data-archive-card]:visible')).toContainText('Witch Hat');
   await page.goto('/guides/'); await page.getByRole('button', { name: 'Filtering', exact: true }).click(); await expect(page.locator('[data-guide-card]:visible')).toHaveCount(1);
 });
@@ -54,14 +60,36 @@ test('lightbox, copy controls, guide TOC, and metric switches work', async ({ pa
   await page.screenshot({ path: 'test-results/comparisons.png', fullPage: true });
 });
 test('theme persists and mobile pages stay within their viewport', async ({ page }) => {
+  const buttonContrast = () => page.locator('.hero-actions .button-primary').evaluate((button) => {
+    const style = getComputedStyle(button);
+    const luminance = (color: string) => {
+      const channels = (color.match(/[\d.]+/g) ?? []).slice(0, 3).map((value) => {
+        const channel = Number(value) / 255;
+        return channel <= .04045 ? channel / 12.92 : ((channel + .055) / 1.055) ** 2.4;
+      });
+      return channels[0]! * .2126 + channels[1]! * .7152 + channels[2]! * .0722;
+    };
+    const foreground = luminance(style.color); const background = luminance(style.backgroundColor);
+    return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05);
+  });
   await page.goto('/'); await page.getByRole('button', { name: 'Switch color theme' }).click(); await page.reload(); await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect.poll(buttonContrast).toBeGreaterThanOrEqual(4.5);
   await page.getByRole('button', { name: 'Switch color theme' }).click();
+  await expect.poll(buttonContrast).toBeGreaterThanOrEqual(4.5);
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const route of ['/', '/anime/', '/anime/frieren/', '/anime/encoding-demo/', '/releases/', '/releases/frieren-01-av1/', '/releases/encoding-demo-01/', '/guides/', '/guides/vapoursynth-source-first/', '/comparisons/', '/about/', 'http://127.0.0.1:4321/studio/']) {
+  for (const route of ['/', '/anime/', '/anime/frieren/', '/anime/encoding-demo/', '/releases/', '/releases/frieren-01-av1/', '/releases/encoding-demo-01/', '/guides/', '/guides/vapoursynth-source-first/', '/comparisons/', '/about/']) {
     await page.goto(route); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), route).toBe(true);
   }
   await page.goto('/'); await page.getByLabel('Open navigation').click(); await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible();
   await page.getByLabel('Open navigation').click();
   await page.screenshot({ path: 'test-results/home-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1480, height: 1000 }); await page.goto('/'); await page.screenshot({ path: 'test-results/home-desktop.png', fullPage: true });
+  // Keep dev HMR navigation separate from the production preview page.
+  const studio = await page.context().newPage();
+  try {
+    await studio.setViewportSize({ width: 390, height: 844 });
+    await studio.goto('http://127.0.0.1:4321/studio/');
+    await expect(studio.locator('[data-studio]')).toHaveAttribute('data-ready', 'true');
+    await expect.poll(async () => { try { return await studio.evaluate(() => document.documentElement.scrollWidth <= innerWidth); } catch { return false; } }).toBe(true);
+  } finally { await studio.close(); }
 });

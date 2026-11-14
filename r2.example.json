@@ -1,0 +1,8 @@
+{
+  "accountId": "YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "bucketName": "yuuki-media",
+  "workerName": "yuuki-media",
+  "mediaOrigin": "https://yuuki-media.YOUR_SUBDOMAIN.workers.dev",
+  "publicOrigin": "https://yuuki03e.pages.dev",
+  "storageBudgetBytes": 9000000000
+}

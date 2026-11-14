@@ -1,7 +1,18 @@
 import { test, expect } from '@playwright/test';
-import { readFile, unlink } from 'node:fs/promises';
+import { readFile, unlink, rm } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
+
+test.beforeEach(async ({ page }) => {
+  // Browser fixtures must never write test posts to the owner's real R2 bucket.
+  await page.route('**/__studio/media-backup-post', (route) => route.fulfill({ json: { ok: true, online: true } }));
+});
+async function removeFixtureBackup(collection: string, id: string) {
+  const base = resolve('media-library/posts', collection);
+  const target = resolve(base, id);
+  if (dirname(target) !== base || !/^qa-studio-[a-z0-9-]+$/.test(id)) throw Error('Unsafe fixture backup path.');
+  await rm(target, { recursive: true, force: true });
+}
 
 test('local studio has working tabs, AniList autofill, safe preview, and visible save results', async ({ page }) => {
   await page.route('https://graphql.anilist.co/', (route) => route.fulfill({ json: { data: { Media: { id: 154587, type: 'ANIME', title: { english: 'Frieren test import', romaji: 'Sousou no Frieren', native: '葬送のフリーレン' }, format: 'TV', season: 'FALL', seasonYear: 2023, episodes: 28, status: 'FINISHED', studios: { nodes: [{ name: 'MADHOUSE' }] }, genres: ['Fantasy'], tags: [{ name: 'Magic' }], coverImage: { extraLarge: 'https://example.com/cover.jpg' }, description: '<b>A mage</b><br>on a journey.' } } } }));
@@ -52,5 +63,27 @@ test('saving a draft through the studio writes validated MDX and hides it from s
     expect(await readFile(destination, 'utf8')).toContain('## Saved heading');
     const items = await page.request.get('http://127.0.0.1:4321/search-index.json').then((response) => response.text());
     expect(items).not.toContain(id);
-  } finally { await unlink(destination).catch((error: NodeJS.ErrnoException) => { if (error.code !== 'ENOENT') throw error; }); }
+  } finally { await unlink(destination).catch((error: NodeJS.ErrnoException) => { if (error.code !== 'ENOENT') throw error; }); await removeFixtureBackup('guides', id); }
+});
+
+test('a newly saved series renders after an older series warms the content import cache', async ({ page, request }) => {
+  const id = `qa-studio-reader-${randomUUID()}`;
+  const destination = resolve('src/content/anime', `${id}.mdx`);
+  if (dirname(destination) !== resolve('src/content/anime')) throw new Error('Invalid test fixture path.');
+  try {
+    await page.goto('http://127.0.0.1:4321/anime/frieren/');
+    const response = await request.post('http://127.0.0.1:4321/__studio/save-anime', { headers: { Origin: 'http://127.0.0.1:4321' }, data: {
+      slug: id, body: '## New reader\n\nSafe cache regression fixture.',
+      data: { title: id, coverImage: '/images/dummy-cover.svg', status: 'Planned', sourceType: 'BD', synopsis: 'Safe reader validation fixture.' },
+    } });
+    expect(response.status()).toBe(201);
+    const saved = await response.json();
+    await expect.poll(async () => (await request.get(`http://127.0.0.1:4321${saved.url}`)).status()).toBe(200);
+    const reader = await request.get(`http://127.0.0.1:4321${saved.url}`);
+    expect(reader.status()).toBe(200); expect(await reader.text()).toContain('Safe cache regression fixture.');
+  } finally {
+    await page.goto('http://127.0.0.1:4321/studio/');
+    const reloaded = page.waitForEvent('framenavigated', { predicate: (frame) => frame === page.mainFrame(), timeout: 10_000 });
+    await unlink(destination); await reloaded; await removeFixtureBackup('anime', id);
+  }
 });

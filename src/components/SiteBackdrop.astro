@@ -1,0 +1,24 @@
+---
+interface Props { preview?: boolean; }
+const { preview = false } = Astro.props;
+---
+<div class:list={['site-backdrop', { preview }]} aria-hidden="true" data-site-backdrop>
+  <div class="backdrop-art contour"></div>
+  <div class="backdrop-art orbit"></div>
+  <div class="backdrop-art grid"></div>
+  <div class="backdrop-grain"></div>
+</div>
+<style>
+  .site-backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; contain: strict; }
+  .preview { position: absolute; z-index: 0; }
+  .backdrop-art { position: absolute; inset: 0; display: none; background: var(--accent); opacity: var(--backdrop-opacity, .0896); }
+  .contour { mask: url('/images/background-contour.svg') center / cover no-repeat; }
+  .orbit { mask: url('/images/background-orbit.svg') center / cover no-repeat; }
+  .grid { background: linear-gradient(var(--accent) 1px, transparent 1px), linear-gradient(90deg, var(--accent) 1px, transparent 1px); background-size: 76px 76px; mask-image: radial-gradient(ellipse at 85% 25%, #000 5%, transparent 75%); }
+  .backdrop-grain { position: absolute; inset: 0; background: url('/images/background-grain.svg') repeat; background-size: 160px 160px; opacity: var(--grain-opacity, 0); }
+  :global([data-background='contour']) .contour { display: block; }
+  :global([data-background='orbit']) .orbit { display: block; }
+  :global([data-background='grid']) .grid { display: block; }
+  :global([data-background='plain']) .backdrop-art { display: none; }
+  :global([data-grain='0']) .backdrop-grain { display: none; }
+</style>

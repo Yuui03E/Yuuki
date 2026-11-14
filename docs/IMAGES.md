@@ -1,33 +1,21 @@
-# Yuuki image storage
+# Yuuki images and videos
 
-**The selected image host is [imgbox](https://imgbox.com/).** ImgLink was rejected after the user observed automatic compression; it must not be used for source/encode comparison frames.
+The selected storage is **Cloudflare R2 Standard**. Follow [R2 setup](R2_SETUP.md) to enable it, create a dedicated private bucket, and connect the read-only media service.
 
-1. Keep original images on the PC and a separate backup.
-2. Create or use an imgbox account to manage public copies.
-3. Use PNG for exact frame inspection. Imgbox supports PNG, JPG and GIF files up to **10 MB each**.
-4. Mark explicit uploads **Adult Content** and comply with the host's rules.
-5. Use image URLs supplied by the **full-size** share codes. A gallery/viewer page URL is not an image URL, and a thumbnail is not a full-resolution comparison frame.
-6. Store those HTTPS addresses in the local studio's cover, screenshot and comparison fields.
-7. Build locally and publish the finished website directly to Cloudflare Pages.
+Enter the title first (or select the series and episode), then choose **Upload to R2** beside a media field. Originals are preserved in ignored `media-library/posts/<collection>/<post-id>/media/<audience>/`. R2 uses the matching `media/<audience>/<collection>/<post-id>/` group. Hash filenames prevent collisions; original filenames stay in the manifest. Changing the displayed title keeps the Content ID and addresses stable. Online bytes are verified before filling the field.
 
-The studio stores address strings in local MDX. It does not upload, download or back up images. The real content collections and their addresses are ignored by Git. Cloudflare receives published HTML, metadata and search data through the finished build, while imgbox serves the public images.
+Saving backs up the editable source and media manifest in that post folder and privately in R2. Use `npm run media:backup` after editing source files directly. Old flat uploads stay available for existing links; `media:organize -- --check` previews their migration. See [folder layout and recovery](R2_SETUP.md#backups-and-recovery).
 
-The website's gallery and native-size comparison viewer support external HTTPS image URLs without adding a frontend framework. Verify matching source/encode dimensions and preserve original pixels and color interpretation. Use original full-size results for quality inspection.
+Images: PNG, JPG, WebP, GIF up to **10 MB**. Videos: MP4 or WebM up to **25 MB**, with optional posters. The service does not recompress files. For exact encoding comparisons use PNG or lossless WebP, equal frame dimensions, and consistent color interpretation. Lossy WebP can change the pixels you are comparing.
 
-| Material | Location |
-| --- | --- |
-| Original images and image-address mapping | PC and independent backup |
-| Public image copies | Imgbox |
-| Editable text and metadata | Local `src/content/`, excluded from Git |
-| Finished pages and public metadata | Cloudflare Pages |
-| Small sample SVG illustrations | Code repository and built website |
+The viewer supports a slider, instant A/B switching, and native pixel inspection. Videos use native controls, no autoplay, and no preload. Optional interactions load on the pages using them.
 
-`media-library/`, migration snapshots, caches and build output are ignored. Raster files and subfolders under `public/images/` are also ignored; only root-level small SVG examples are tracked. Such ignored files can enter a local build if deliberately placed under `public/`, so keep bulk originals in `media-library/` and use external image addresses.
+Guides support multiple screenshots, comparison pairs and videos. Load a saved guide in the studio before uploading into its existing folder; a current source revision prevents attaching uploads through a stale editor. See [guide writing](GUIDES.md) for adding evidence and previewing drafts.
 
-Imgbox advertises unlimited image storage/time, subject to fair use, and permits full-size inline linking. That is not a verified guarantee that your 5 GB library will always be retained or served. Keep your own originals and mapping.
+Mark adult posts before uploading. Adult classification is inherited by releases, inferred from R2 adult paths and Hentai tags, and enforced during page and search generation. Visitors confirm once per browser/site, with a visible option to hide content and reset that saved preference. Media remains unloaded before the first confirmation. The choice does not make public URLs private or verify a visitor's age.
 
-No account or media upload was created by this project change. A future local upload helper can be added after the manual imgbox flow works; its credentials must stay local. Video remains optional and is not part of this setup.
+Existing full-size HTTPS image links, including imgbox, remain supported. Use a direct media URL rather than a gallery/viewer page or thumbnail. Existing media URLs are not automatically migrated or downloaded. ImgLink remains unsuitable for exact frames because the user observed compression.
 
-- [Imgbox help: supported types, size, retention and full-size embedding](https://imgbox.com/help)
-- [Imgbox terms](https://imgbox.com/tos)
-- [Publishing workflow and remaining setup](PUBLISHING.md)
+Posts and editable metadata remain in local `src/content/`. Their published representation is served by Cloudflare Pages. Bulk media stays out of GitHub and outside `public/`; only safe SVG illustrations belong in the code repository.
+
+Keep an independent backup of the local collections, entire media library, and settings. See [R2 costs, limits, recovery and content rules](R2_SETUP.md) and [Pages publishing](PUBLISHING.md).

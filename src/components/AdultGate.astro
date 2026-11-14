@@ -1,0 +1,32 @@
+---
+import { deferMediaHtml } from '../lib/audience.mjs';
+const content = deferMediaHtml(await Astro.slots.render('default'));
+---
+<section class="adult-gate" data-adult-gate>
+  <div class="adult-choice panel" data-adult-choice>
+    <span class="badge badge-violet">ADULT CONTENT</span>
+    <h1>Choose whether to continue.</h1>
+    <p>This area can contain adult images, videos, and descriptions. Your choice is remembered in this browser. Media stays unloaded until your first confirmation.</p>
+    <label><input type="checkbox" data-adult-confirm/> I am 18 or older and want to view adult content.</label>
+    <div class="choice-actions"><button class="button button-primary" type="button" data-adult-continue disabled>Continue to adult content</button><a class="button" href="/">Return to the general archive</a></div>
+    <p class="choice-note">Use “Hide and reset adult choice” to forget this preference. Clearing browser storage also resets it. If storage is blocked, the choice lasts only for this tab or page. This is not identity or age verification; published addresses remain public.</p>
+  </div>
+  <div class="adult-content" data-adult-content hidden>
+    <div class="adult-toolbar"><span class="badge badge-violet">ADULT AREA</span><button type="button" class="text-link" data-adult-leave>Hide and reset adult choice</button><a href="/">General archive ↗</a></div>
+    <div set:html={content}/>
+  </div>
+  <noscript><p class="empty-state">Enable JavaScript to make the adult-content choice. Media remains unloaded.</p></noscript>
+</section>
+<script>import { initAdultGates } from '../scripts/adult'; initAdultGates();</script>
+<style>
+  .adult-choice { max-width: 720px; margin: 24px auto; padding: clamp(20px, 5vw, 40px); }
+  h1 { margin: 18px 0 12px; font-size: clamp(1.6rem, 4vw, 2.3rem); }
+  p { color: var(--muted); line-height: 1.7; }
+  label { display: flex; align-items: flex-start; gap: 10px; margin: 24px 0 18px; line-height: 1.6; }
+  input { margin-top: 5px; accent-color: var(--violet); }
+  .choice-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .choice-note { margin-top: 20px; font-size: .76rem; }
+  .adult-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 24px; font-size: .8rem; }
+  .adult-toolbar a { margin-left: auto; color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>

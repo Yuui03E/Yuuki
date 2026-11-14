@@ -2,14 +2,14 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-export function checkRepository(root) {
-  const result = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' });
+export function checkRepository(root, { includeUntracked = false } = {}) {
+  const result = spawnSync('git', ['ls-files', '-z', ...(includeUntracked ? ['--cached', '--others', '--exclude-standard'] : [])], { cwd: root, encoding: 'utf8' });
   if (result.status !== 0) throw new Error('Repository check requires this project’s Git checkout.');
   const files = result.stdout.split('\0').filter(Boolean);
   const unsafe = files.filter((file) =>
     (file.startsWith('src/content/') && !file.endsWith('/.gitkeep')) ||
     /^(dist|\.astro|node_modules|local-backups|media-library|raw-sources|test-results|playwright-report|\.wrangler)\//.test(file) ||
-    /(^|\/)\.env[^/]*$/.test(file) || file === 'publishing.local.json' ||
+    /(^|\/)\.env[^/]*$/.test(file) || ['publishing.local.json', 'r2.local.json'].includes(file) ||
     (file.startsWith('public/images/') && !/^public\/images\/[^/]+\.svg$/.test(file)) ||
     /\.(mkv|mp4|m2ts|webm|flac|wav|opus|aac|7z|zip|rar|iso)$/i.test(file)
   );

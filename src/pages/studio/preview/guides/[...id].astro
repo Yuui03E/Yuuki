@@ -1,0 +1,17 @@
+---
+import { getCollection, render } from 'astro:content';
+import GuideLayout from '../../../../layouts/GuideLayout.astro';
+import { isAdult, hasAdultMedia, assertAdultBody } from '../../../../lib/audience.mjs';
+export async function getStaticPaths() {
+  if (!import.meta.env.DEV) return [];
+  const guides = await getCollection('guides');
+  return guides.map((entry) => ({ params: { id: entry.id }, props: { entry } }));
+}
+const { entry } = Astro.props;
+const adult = isAdult(entry.data) || hasAdultMedia(entry.body);
+if (adult) assertAdultBody(entry.body);
+const classified = { ...entry, data: { ...entry.data, adult } };
+const { Content, headings } = await render(entry);
+const readingMinutes = Math.max(1, Math.ceil((entry.body?.split(/\s+/).length ?? 0) / 200));
+---
+<GuideLayout entry={classified} headings={headings} readingMinutes={readingMinutes} preview><Content/></GuideLayout>

@@ -15,8 +15,19 @@ const downloadUrl = z.string().trim().max(4000).refine((value) => {
   } catch { return false; }
 }, 'Use an HTTP(S) download URL or a magnet URI with an xt parameter.');
 const tags = z.array(text).max(60).default([]);
+const audience = { adult: z.boolean().default(false) };
+
+export const videoSchema = z.object({
+  title: text,
+  src: z.string().trim().max(2000).refine((value) => {
+    try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password; } catch { return false; }
+  }, 'Use an HTTPS video URL without credentials.'),
+  poster: imagePath.optional(),
+  caption: optionalText,
+}).strict();
 
 export const animeFields = {
+  ...audience,
   title: text,
   romajiTitle: optionalText,
   japaneseTitle: optionalText,
@@ -59,7 +70,25 @@ export const downloadSchema = z.object({
   label: text, url: downloadUrl, provider: optionalText, isMagnet: z.boolean().default(false),
 }).strict().transform((download) => ({ ...download, isMagnet: download.url.startsWith('magnet:') }));
 
+export type Screenshot = z.output<typeof screenshotSchema>;
+export type FrameComparison = z.output<typeof comparisonSchema>;
+export type GuideVideo = z.output<typeof videoSchema>;
+
+export const guidePresetSchema = z.object({
+  title: text,
+  label: optionalText,
+  codec: optionalText,
+  goal: text,
+  tradeoff: z.string().trim().min(1).max(2000),
+  compatibility: z.string().trim().min(1).max(2000).optional(),
+  command: z.string().trim().min(1).max(30_000),
+  language: z.enum(['Command Prompt', 'PowerShell', 'Bash', 'Plain text']).default('Command Prompt'),
+  notes: z.string().trim().min(1).max(5000).optional(),
+  recommended: z.boolean().optional(),
+}).strict();
+
 export const episodeFields = {
+  ...audience,
   episodeNumber: z.union([count, text]),
   isBatch: z.boolean().default(false),
   releaseTag: text.default('[Yuuki]'),
@@ -84,14 +113,25 @@ export const episodeFields = {
   mediainfo: longText,
   screenshots: z.array(screenshotSchema).max(40).optional(),
   comparisons: z.array(comparisonSchema).max(30).optional(),
+  videos: z.array(videoSchema).max(8).optional(),
   downloads: z.array(downloadSchema).max(30).optional(),
   changelog: z.array(z.object({ version: text, date: z.coerce.date(), notes: z.string().trim().min(1).max(5000) }).strict()).max(40).optional(),
   draft: z.boolean().default(false),
 };
 
 export const guideFields = {
+  ...audience,
   title: text,
   description: z.string().trim().min(1).max(2000),
+  summary: z.string().trim().min(1).max(2000).optional(),
+  version: optionalText,
+  prerequisites: z.array(z.string().trim().min(1).max(2000)).max(20).optional(),
+  takeaways: z.array(text).max(12).optional(),
+  presets: z.array(guidePresetSchema).max(20).optional(),
+  screenshots: z.array(screenshotSchema).max(40).optional(),
+  comparisons: z.array(comparisonSchema).max(30).optional(),
+  videos: z.array(videoSchema).max(8).optional(),
+  downloads: z.array(downloadSchema).max(30).optional(),
   category: z.enum(['Encoding', 'Filtering', 'Playback', 'Tools', 'Workflow']),
   difficulty: z.enum(['Beginner', 'Intermediate', 'Advanced']),
   os: z.array(text).max(10).optional(),
@@ -103,6 +143,8 @@ export const guideFields = {
 
 export const metricNames = ['ssimulacra2', 'vmaf', 'butteraugli', 'psnr', 'fps'] as const;
 export const benchmarkFields = {
+  ...audience,
+  draft: z.boolean().default(false),
   title: text,
   subtitle: z.string().trim().min(1).max(2000),
   sourceClip: text,
@@ -123,6 +165,7 @@ export const benchmarkFields = {
 };
 
 export const progressFields = {
+  ...audience,
   title: text,
   date: z.coerce.date(),
   category: z.enum(['Release', 'Encoding', 'Pipeline', 'Site']),

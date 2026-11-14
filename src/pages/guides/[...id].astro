@@ -2,7 +2,7 @@
 import { render } from 'astro:content';
 import GuideLayout from '../../layouts/GuideLayout.astro';
 import { getArchive } from '../../lib/archive';
-export async function getStaticPaths() { const { guides } = await getArchive(); return guides.map((entry) => ({ params: { id: entry.id }, props: { entry } })); }
+export async function getStaticPaths() { const { guides } = await getArchive({ audience: 'all' }); return guides.map((entry) => ({ params: { id: entry.id }, props: { entry } })); }
 const { entry } = Astro.props;
 const { Content, headings } = await render(entry);
 const readingMinutes = Math.max(1, Math.ceil((entry.body?.split(/\s+/).length ?? 0) / 200));

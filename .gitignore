@@ -8,6 +8,7 @@ media-library/
 local-backups/
 .wrangler/
 publishing.local.json
+r2.local.json
 .code-only-check-*/
 .npm-cache/
 test-results/

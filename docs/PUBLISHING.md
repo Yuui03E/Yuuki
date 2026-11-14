@@ -1,12 +1,12 @@
 # Publishing Yuuki
 
-The workflow is: write locally → upload selected public screenshots to imgbox → paste full-size image addresses into your posts → build the complete website on this PC → upload the finished site to the existing Cloudflare Pages project.
+The workflow is: write locally → upload selected media through the studio to R2 → keep the verified media addresses into your posts → build the complete website on this PC → upload the finished site to the existing Cloudflare Pages project.
 
-GitHub holds reusable code and safe examples. Cloudflare serves the published pages and imgbox serves public images while this PC is off. This setup needs no database, hosted CMS, R2 subscription, paid domain, SSR, or server adapter.
+GitHub holds reusable code and safe examples. Cloudflare serves the published pages and R2 serves public images and videos while this PC is off. Use R2 Standard and Workers Free as described in [R2 setup](R2_SETUP.md). No database, hosted CMS, paid domain, SSR, or server adapter is needed. R2 activation requires billing details; its free allowance is not a hard spending cap.
 
 ## Current status
 
-Local content separation, safe sample import, repository checks, guarded local builds, and the direct publisher are implemented. The one-time Cloudflare connection and an actual direct upload have not been completed. Do not assume the live site matches the current local build.
+Local content separation, safe sample import, repository checks, guarded local builds, and the direct publisher are implemented. R2 and its read-only media Worker are connected on this PC. Pages target configuration and a direct website upload remain unfinished. Do not assume the live site matches the current local build.
 
 ## One-time Cloudflare setup
 
@@ -30,6 +30,8 @@ npm run preview -- --port 4322
 Open http://127.0.0.1:4322/. The check command uploads nothing. Review the intended public posts, links, images, comparison frames, and searchable text. Current search includes guide bodies and episode MediaInfo; remove private filenames, paths, or other personal details from intended public records before publication.
 
 Drafts and episodes of draft series stay out of public pages and search. The writing studio, its authoring JavaScript, and write endpoints are development-only. Published text and metadata remain readable to visitors and crawlers even though their editable files are absent from GitHub.
+
+Guide drafts have a full local preview at `/studio/preview/guides/<content-id>/`. These previews are absent from the production build. Review the guide locally before clearing its draft flag; see [guide editing](GUIDES.md).
 
 ## Upload when publication is intended
 
@@ -57,7 +59,7 @@ Keep separate backups of all five local collections, original media, and filenam
 
 ## Before explicit-image publication
 
-Adult classification, inheritance from series to episodes, separate adult browsing/search, neutral social previews, and image loading after a deliberate adult-content choice are still planned. Implement classification during page and search generation rather than only hiding cards with CSS.
+Adult classification, inheritance from series to episodes, separate adult browsing/search, neutral social previews, and remembered browser consent are implemented. Mark adult posts before uploading, and review the separate adult area with a safe fixture. Existing Hentai tags and adult R2 paths also infer classification. Adult notes use text and fenced code; dedicated fields hold media. This PC's R2 service is connected. Publishing changed pages to the live website remains a separate action.
 
 A static warning is not verified-age access control and does not make public URLs private. Follow the providers' content rules and applicable law for lawful depictions of adults you are entitled to publish. Use safe fixtures when testing these controls.
 
