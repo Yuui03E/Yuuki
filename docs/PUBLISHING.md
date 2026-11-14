@@ -6,7 +6,7 @@ GitHub holds reusable code and safe examples. Cloudflare serves the published pa
 
 ## Current status
 
-Local content separation, safe sample import, repository checks, guarded local builds, and the direct publisher are implemented. R2 and its read-only media Worker are connected on this PC. Pages target configuration and a direct website upload remain unfinished. Do not assume the live site matches the current local build.
+Local content separation, safe sample import, repository checks, guarded local builds, and the direct publisher are implemented. R2 and its read-only media Worker are connected on this PC. The existing Pages target is configured locally, with automatic Git production and preview builds disabled. Code synchronization and website publication remain separate: publish the reviewed complete local build with `npm run publish:site`.
 
 ## One-time Cloudflare setup
 
@@ -18,7 +18,7 @@ Local content separation, safe sample import, repository checks, guarded local b
    npx wrangler pages project list
    ~~~
 
-3. Copy the root `publishing.example.json` to `publishing.local.json`. Enter the verified existing project name and production branch from Cloudflare. Do not guess the project name from its public address. This file is ignored by Git and contains no credentials.
+3. Copy the root `publishing.example.json` to `publishing.local.json`. Enter the verified account ID, existing project name and production branch from Cloudflare. Do not guess the project name from its public address. This file is ignored by Git and contains no credentials. The account ID selects the account for the upload without changing the browser code or your shell's account preference.
 
 ## Review before uploading
 

@@ -85,6 +85,25 @@ test('publishing target validation protects production from an accidental previe
   assert.throws(() => publishSettings(settings, 'main'), /different from production/);
   assert.throws(() => publishSettings(settings, 'main;other-command'), /valid/);
   assert.throws(() => publishSettings({ ...settings, projectName: 'YOUR_PROJECT' }), /verified/);
+  assert.throws(() => publishSettings({ ...settings, accountId: 'YOUR_ACCOUNT_ID' }), /account ID/);
+  assert.throws(() => publishSettings({ ...settings, accountId: 123 }), /account ID/);
+});
+
+test('publishing uses the verified account for upload while preserving the caller environment', async (t) => {
+  const root = await fixture(t);
+  const previousAccount = process.env.CLOUDFLARE_ACCOUNT_ID;
+  t.after(() => { if (previousAccount === undefined) delete process.env.CLOUDFLARE_ACCOUNT_ID; else process.env.CLOUDFLARE_ACCOUNT_ID = previousAccount; });
+  process.env.CLOUDFLARE_ACCOUNT_ID = 'b'.repeat(32);
+  const calls = [];
+  const accountId = 'a'.repeat(32);
+  await publishSite({ root, settings: { accountId, projectName: 'test-project', productionBranch: 'main' },
+    tool: async (_root, name, args, env) => { calls.push({ name, args, accountId: env?.CLOUDFLARE_ACCOUNT_ID }); },
+    build: async () => {}, output: async () => 1 });
+  assert.deepEqual(calls.map(({ name }) => name), ['astro', 'wrangler']);
+  assert.equal(calls[0].accountId, undefined);
+  assert.equal(calls[1].accountId, accountId);
+  assert.deepEqual(calls[1].args, ['pages', 'deploy', 'dist', '--project-name', 'test-project', '--branch', 'main', '--commit-dirty=true']);
+  assert.equal(process.env.CLOUDFLARE_ACCOUNT_ID, 'b'.repeat(32));
 });
 
 test('publish output rejects accidentally copied private source and directory links', async (t) => {

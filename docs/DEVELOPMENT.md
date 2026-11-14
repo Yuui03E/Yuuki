@@ -54,7 +54,7 @@ The next development command regenerates Astro state. Run `npm run build` before
 
 Git synchronizes tracked source, documentation, configuration, tests, and safe examples. Real post files, media, image addresses, credentials, build output, and installed dependencies remain local. These exclusions are intentional; matching code does not mean uploading every file on the PC.
 
-Before a code push, inspect the changes, run appropriate verification and `npm run check:repo`, and commit the intended files. Push only when requested. Until automatic Cloudflare Git deployments are disabled, begin code-update commit messages with `[CF-Pages-Skip]`. A code push does not publish the local archive.
+Before a code push, inspect the changes, run appropriate verification and `npm run check:repo`, and commit the intended files. Push only when requested. This project's automatic Cloudflare Git production and preview builds are disabled; a code push synchronizes reusable source. Continue using `[CF-Pages-Skip]` for compatibility with the earlier deployment settings. Publish the reviewed complete local archive separately with `npm run publish:site`, using the verified account, project and production branch in ignored `publishing.local.json`.
 
 To bring a completed remote code update onto this PC, start with a clean working tree and use `git pull --ff-only`. A new PC needs its own dependency installation and restored local content/media backup. The demo importer is only for an empty archive without restored posts.
 

@@ -6,10 +6,11 @@ import { runTool } from './run-tool.mjs';
 
 export function publishSettings(settings, previewBranch) {
   if (!settings || !/^[a-z0-9][a-z0-9-]{0,57}$/.test(settings.projectName ?? '')) throw new Error('Set your verified existing Pages project name in publishing.local.json.');
+  if (settings.accountId !== undefined && (typeof settings.accountId !== 'string' || !/^[a-f0-9]{32}$/i.test(settings.accountId))) throw new Error('Set your verified Cloudflare account ID in publishing.local.json.');
   const validBranch = (value) => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,99}$/.test(value) && !value.includes('..');
   if (!validBranch(settings.productionBranch)) throw new Error('Set the production branch from your Pages dashboard.');
   if (previewBranch !== undefined && (!validBranch(previewBranch) || previewBranch === settings.productionBranch)) throw new Error('A preview branch must be valid and different from production.');
-  return { projectName: settings.projectName, branch: previewBranch ?? settings.productionBranch };
+  return { projectName: settings.projectName, branch: previewBranch ?? settings.productionBranch, ...(settings.accountId === undefined ? {} : { accountId: settings.accountId }) };
 }
 
 export async function checkOutput(root) {
@@ -42,7 +43,8 @@ export async function publishSite({ root, settings, previewBranch, checkOnly = f
   await build(root);
   const count = await output(root);
   if (checkOnly) { console.log(`Local publishing checks passed (${count} output files). No upload requested.`); return; }
-  await tool(root, 'wrangler', ['pages', 'deploy', 'dist', '--project-name', target.projectName, '--branch', target.branch, '--commit-dirty=true']);
+  const publishEnv = target.accountId ? { ...process.env, CLOUDFLARE_ACCOUNT_ID: target.accountId } : process.env;
+  await tool(root, 'wrangler', ['pages', 'deploy', 'dist', '--project-name', target.projectName, '--branch', target.branch, '--commit-dirty=true'], publishEnv);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
